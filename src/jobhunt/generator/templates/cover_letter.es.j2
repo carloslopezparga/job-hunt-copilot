@@ -1,0 +1,11 @@
+{#- Carta de presentación (español). Cada frase sale de datos de profile.yaml. -#}
+Me dirijo a ustedes para presentar mi candidatura al puesto de {{ job.title }} en {{ job.company }}. Actualmente curso el {{ degree }} en {{ institution }}{% if grad %}, con graduación prevista en {{ grad }}{% endif %}{% if level >= 4 and grade %}, con una nota media de {{ grade }}{% endif %}.
+
+{% if exp -%}
+Como {{ exp.title }} en {{ exp.organization }}, {{ exp_bullets[0] }}.{% if level >= 2 and exp_bullets|length > 1 %} Además, {{ exp_bullets[1] }}.{% endif %}{% if level >= 5 and other_exp %} Anteriormente, como {{ other_exp.title }} en {{ other_exp.organization }}, {{ other_exp_bullet }}.{% endif %}
+{%- endif %}{% if project %}{% if exp %} {% endif %}En mi proyecto «{{ project.title }}», {{ project_bullets[0] }}.{% if level >= 3 and project_bullets|length > 1 %} También {{ project_bullets[1] }}.{% endif %}{% endif %}
+
+{% if skills -%}
+Este puesto requiere competencias que figuran en mi CV, como {{ skills }}.{% endif %}{% if level >= 3 and languages %} Hablo {{ languages }}.{% endif %}{% if level >= 4 and achievement %} Entre mis logros: {{ achievement }}.{% endif %}{% if motivation %} {{ motivation }}{% endif %}
+
+{% if window %}Estaría disponible desde {{ window_start }} hasta {{ window_end }}{% if window.remote_only %}, en remoto y compatible con mis estudios{% endif %}. {% endif %}Les agradezco su consideración y quedo a su disposición para comentar cómo podría contribuir a {{ job.company }}.

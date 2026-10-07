@@ -1,0 +1,158 @@
+# =============================================================================
+#  profile.yaml — the ONLY source of truth about you
+# =============================================================================
+#  Copy this file to `profile.yaml` (or run `jobhunt init`) and fill it in.
+#  `profile.yaml` is git-ignored: your personal data never leaves your machine.
+#
+#  Golden rule: write only things that are TRUE and that you can back up in an
+#  interview. The copilot never invents, rounds up or embellishes anything:
+#  CVs, cover letters and messages are assembled exclusively from this file.
+#  If a field is empty, it is simply left out of the documents.
+#
+#  Bilingual text: any free-text field can be either a plain string (used for
+#  every language) or a mapping {en: "...", es: "..."}. If the Spanish version
+#  is missing, the English one is used and the generator warns you.
+#
+#  Placeholders: anything still containing "TODO" blocks `jobhunt prepare`
+#  until you replace it, so half-filled templates are never sent out.
+# =============================================================================
+
+personal:
+  full_name: "TODO Your Name"
+  email: "TODO you@example.com"
+  phone: ""                 # optional, international format: +34 600 000 000
+  location: "Madrid, Spain" # city, country where you live now
+  linkedin: ""              # optional, full URL
+  github: ""                # optional, full URL
+  website: ""               # optional
+  # Regions where you can work WITHOUT visa sponsorship. Used only to flag
+  # offers that may need sponsorship (e.g. US roles). Values: EU, UK, US, CH, ...
+  work_authorization: ["EU"]
+
+# One or two sentences describing you, in your own words. Used verbatim at the
+# top of the CV. `default` is mandatory; add per-sector variants if you want a
+# different angle (keys: ai_tech, quant_trading, investment_banking,
+# consulting, fintech).
+summaries:
+  default:
+    en: "TODO Industrial engineering student at ETSII-UPM interested in ..."
+    es: ""
+  # quant_trading:
+  #   en: "..."
+
+education:
+  - institution: "Universidad Politécnica de Madrid — ETSII"
+    short_name: "ETSII-UPM"   # short form used in LinkedIn messages (300-char limit)
+    field_of_study:           # short field name used in messages
+      en: "Industrial Engineering"
+      es: "Ingeniería Industrial"
+    degree:
+      en: "TODO BSc in Industrial Technology Engineering"   # official title
+      es: "TODO Grado en Ingeniería en Tecnologías Industriales"
+    location: "Madrid, Spain"
+    start: "2023-09"        # YYYY-MM
+    end: "2027-06"          # YYYY-MM (expected graduation if not finished)
+    expected: true          # true while you are still studying
+    grade: ""               # ONLY the official figure, e.g. "8.2/10". Leave empty otherwise.
+    highlights: []          # real coursework, honours, exchanges. E.g. "Exchange at TU Delft (2025-26)"
+
+experience: []
+  # - organization: "Company / club / lab"
+  #   role: "Your exact role title"
+  #   location: "Madrid, Spain"   # or "Remote"
+  #   start: "2025-06"
+  #   end: "2025-09"              # or "present"
+  #   bullets:                    # facts only; numbers only if you measured them
+  #     - en: "Built ... that reduced ... by 15% (measured over 3 months)"
+  #       es: "Desarrollé ... que redujo ... un 15% (medido durante 3 meses)"
+  #   skills: [Python, SQL]       # tags used to match offers
+
+projects: []
+  # - name: "Project name"
+  #   date: "2025-03"
+  #   url: ""                     # repo or demo, optional
+  #   description:
+  #     en: "One line on what it is"
+  #   bullets:
+  #     - en: "What you did, concretely"
+  #   skills: [Python, PyTorch]
+
+# Languages with your REAL level. `level` uses the CEFR scale (A1..C2, or
+# "native"). `certificate` is only for official certificates you actually hold
+# (e.g. "Cambridge C1 Advanced (2023)", "TOEFL iBT 105 (2024)", "DELF B2").
+# Leave `certificate` empty if you have none: the CV will then show the level
+# without claiming a certificate.
+languages:
+  - language: "Spanish"
+    level: "native"
+    certificate: ""
+  - language: "English"
+    level: "TODO B2/C1/C2"
+    certificate: ""
+
+skills:
+  technical: []   # programming & quantitative: Python, SQL, MATLAB, C++, statistics...
+  tools: []       # Excel, Git, Power BI, SolidWorks, ...
+  domains: []     # optimisation, supply chain, financial modelling, ML, ...
+
+achievements: []  # competitions, scholarships, awards. Real and verifiable only.
+
+# Why you want each sector, in your own words (2-3 sentences). Used in cover
+# letters. Sectors without a motivation simply get a shorter letter.
+motivations: {}
+  # ai_tech:
+  #   en: "..."
+  #   es: "..."
+  # quant_trading: {en: "..."}
+  # investment_banking: {en: "..."}
+  # consulting: {en: "..."}
+  # fintech: {en: "..."}
+
+preferences:
+  # Keywords that describe the roles you want (matched against job titles first,
+  # then descriptions).
+  roles:
+    - machine learning
+    - data science
+    - software engineer
+    - quantitative
+    - trading
+    - investment banking
+    - strategy
+    - consulting
+    - analyst
+  # Canonical sector keys used across the tool and in companies.yaml.
+  sectors: [ai_tech, quant_trading, investment_banking, consulting, fintech]
+  contract_types: [internship]
+  # Titles containing any of these are heavily penalised.
+  exclude_title_keywords: [senior, staff, principal, lead, manager, director, head of, phd]
+  locations:
+    preferred: [London, Amsterdam, Zurich, Dublin, Paris, Berlin, Munich, New York, Singapore]
+    acceptable: [Europe, EMEA, Madrid, Barcelona, Lisbon]
+    avoid: []
+  # Time windows in which you can work. A window with remote_only: true only
+  # accepts remote offers (e.g. part-time remote internship during the term).
+  availability:
+    - label: "Remote internship during the academic year"
+      start: "2026-10-01"
+      end: "2027-05-31"
+      remote_only: true
+    - label: "Summer / off-cycle internship 2027"
+      start: "2027-06-01"
+      end: "2027-12-31"
+      remote_only: false
+  # Languages you apply in. The first one is the default.
+  application_languages: [en, es]
+
+# Optional: tune the scoring weights (any subset; values are relative and are
+# normalised to 100).
+scoring:
+  min_score_to_prepare: 65
+  weights:
+    role: 25
+    sector: 15
+    contract: 20
+    remote: 10
+    dates: 10
+    skills: 15
+    location: 5

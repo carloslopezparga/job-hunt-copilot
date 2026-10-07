@@ -1,0 +1,197 @@
+{
+  "jobs": [
+    {
+      "absolute_url": "https://boards.greenhouse.io/northwindquant/jobs/7012345",
+      "data_compliance": [
+        {
+          "type": "gdpr",
+          "requires_consent": false,
+          "requires_processing_consent": false,
+          "requires_retention_consent": false,
+          "retention_period": null
+        }
+      ],
+      "internal_job_id": 4400121,
+      "location": {
+        "name": "London, United Kingdom"
+      },
+      "metadata": [
+        {
+          "id": 9101,
+          "name": "Employment Type",
+          "value": "Intern",
+          "value_type": "single_select"
+        }
+      ],
+      "id": 7012345,
+      "updated_at": "2026-09-28T10:15:02-04:00",
+      "requisition_id": "QR-2027-01",
+      "title": "Quantitative Research Intern - Summer 2027",
+      "company_name": "Northwind Quant",
+      "first_published": "2026-09-15T09:00:00-04:00",
+      "content": "&lt;p&gt;&lt;strong&gt;About the role&lt;/strong&gt;&lt;/p&gt;&lt;p&gt;Join our London research team for a 10-12 week internship in Summer 2027 (June-September). You will research systematic trading signals alongside experienced quantitative researchers.&lt;/p&gt;&lt;p&gt;&lt;strong&gt;What you&#x27;ll do&lt;/strong&gt;&lt;/p&gt;&lt;ul&gt;&lt;li&gt;Analyse large financial time series datasets in Python&lt;/li&gt;&lt;li&gt;Prototype and backtest predictive signals&lt;/li&gt;&lt;li&gt;Present findings to the trading desk&lt;/li&gt;&lt;/ul&gt;&lt;p&gt;&lt;strong&gt;About you&lt;/strong&gt;&lt;/p&gt;&lt;ul&gt;&lt;li&gt;Currently pursuing a degree in Mathematics, Physics, Engineering or Computer Science, graduating in 2027 or 2028&lt;/li&gt;&lt;li&gt;Strong knowledge of probability and statistics&lt;/li&gt;&lt;li&gt;Programming experience in Python or C++&lt;/li&gt;&lt;/ul&gt;",
+      "departments": [
+        {
+          "id": 501,
+          "name": "Quantitative Research",
+          "parent_id": null,
+          "child_ids": []
+        }
+      ],
+      "offices": [
+        {
+          "id": 31,
+          "name": "London",
+          "location": "London, United Kingdom",
+          "parent_id": null,
+          "child_ids": []
+        }
+      ]
+    },
+    {
+      "absolute_url": "https://boards.greenhouse.io/northwindquant/jobs/7012399",
+      "location": {
+        "name": "Amsterdam, Netherlands"
+      },
+      "metadata": [
+        {
+          "id": 9101,
+          "name": "Employment Type",
+          "value": "Intern",
+          "value_type": "single_select"
+        }
+      ],
+      "id": 7012399,
+      "updated_at": "2026-09-30T08:00:00-04:00",
+      "requisition_id": "SWE-OC-27",
+      "title": "Software Engineer Intern (Off-Cycle 2027)",
+      "company_name": "Northwind Quant",
+      "first_published": "2026-09-20T08:00:00-04:00",
+      "content": "&lt;p&gt;Our off-cycle internship runs for 6 months starting January or July 2027 in Amsterdam.&lt;/p&gt;&lt;ul&gt;&lt;li&gt;Build low-latency trading infrastructure in C++ and Python&lt;/li&gt;&lt;li&gt;Work with Linux, Git and our in-house simulation tools&lt;/li&gt;&lt;/ul&gt;&lt;p&gt;You are studying Computer Science or Engineering and enjoy solving hard problems.&lt;/p&gt;",
+      "departments": [
+        {
+          "id": 502,
+          "name": "Technology",
+          "parent_id": null,
+          "child_ids": []
+        }
+      ],
+      "offices": [
+        {
+          "id": 32,
+          "name": "Amsterdam",
+          "location": "Amsterdam, Netherlands",
+          "parent_id": null,
+          "child_ids": []
+        }
+      ]
+    },
+    {
+      "absolute_url": "https://boards.greenhouse.io/northwindquant/jobs/7011111",
+      "location": {
+        "name": "London, United Kingdom"
+      },
+      "metadata": [
+        {
+          "id": 9101,
+          "name": "Employment Type",
+          "value": "Full-time",
+          "value_type": "single_select"
+        }
+      ],
+      "id": 7011111,
+      "updated_at": "2026-08-01T12:00:00-04:00",
+      "title": "Senior Quantitative Developer",
+      "company_name": "Northwind Quant",
+      "first_published": "2026-07-01T12:00:00-04:00",
+      "content": "&lt;p&gt;We are looking for a senior developer with 7+ years of experience in C++ and Python to lead our research platform.&lt;/p&gt;",
+      "departments": [
+        {
+          "id": 502,
+          "name": "Technology",
+          "parent_id": null,
+          "child_ids": []
+        }
+      ],
+      "offices": [
+        {
+          "id": 31,
+          "name": "London",
+          "location": "London, United Kingdom",
+          "parent_id": null,
+          "child_ids": []
+        }
+      ]
+    },
+    {
+      "absolute_url": "https://boards.greenhouse.io/northwindquant/jobs/7013333",
+      "location": {
+        "name": "Chicago, IL"
+      },
+      "metadata": [],
+      "id": 7013333,
+      "updated_at": "2026-09-10T12:00:00-04:00",
+      "title": "Trading Operations Analyst",
+      "company_name": "Northwind Quant",
+      "first_published": "2026-09-01T12:00:00-04:00",
+      "content": "&lt;p&gt;Full-time role supporting our trading desks in Chicago. Experience with Excel and SQL preferred.&lt;/p&gt;",
+      "departments": [
+        {
+          "id": 503,
+          "name": "Operations",
+          "parent_id": null,
+          "child_ids": []
+        }
+      ],
+      "offices": [
+        {
+          "id": 33,
+          "name": "Chicago",
+          "location": "Chicago, IL",
+          "parent_id": null,
+          "child_ids": []
+        }
+      ]
+    },
+    {
+      "absolute_url": "https://boards.greenhouse.io/northwindquant/jobs/6900001",
+      "location": {
+        "name": "New York, NY"
+      },
+      "metadata": [
+        {
+          "id": 9101,
+          "name": "Employment Type",
+          "value": "Intern",
+          "value_type": "single_select"
+        }
+      ],
+      "id": 6900001,
+      "updated_at": "2026-02-10T12:00:00-04:00",
+      "title": "Quantitative Trading Intern - Summer 2026",
+      "company_name": "Northwind Quant",
+      "first_published": "2025-09-01T12:00:00-04:00",
+      "content": "&lt;p&gt;10-week internship in Summer 2026 in New York. Strong probability, statistics and Python skills required.&lt;/p&gt;",
+      "departments": [
+        {
+          "id": 504,
+          "name": "Trading",
+          "parent_id": null,
+          "child_ids": []
+        }
+      ],
+      "offices": [
+        {
+          "id": 34,
+          "name": "New York",
+          "location": "New York, NY",
+          "parent_id": null,
+          "child_ids": []
+        }
+      ]
+    }
+  ],
+  "meta": {
+    "total": 5
+  }
+}

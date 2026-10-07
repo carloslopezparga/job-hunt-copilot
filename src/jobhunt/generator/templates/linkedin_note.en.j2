@@ -1,0 +1,2 @@
+{#- LinkedIn connection note: hard limit 300 characters. `level` 1-3 adds detail. -#}
+Hi [Name], I'm {{ first_name }}, {{ field_article }} {{ field }} student at {{ school }}. I'm applying for the {{ job.title }} role at {{ job.company }}{% if level >= 2 and highlight %}; {{ highlight }}{% endif %}. {% if level >= 3 %}Would you be open to a short chat? {% endif %}Thank you!
