@@ -75,6 +75,8 @@ class Education:
     expected: bool = False
     grade: str = ""
     highlights: list[LocalizedText] = field(default_factory=list)
+    short_name: str = ""  # e.g. "ETSII-UPM", used where space is tight
+    field_of_study: LocalizedText = ""  # e.g. "Industrial Engineering"
 
 
 @dataclass
@@ -270,6 +272,8 @@ def parse_profile(data: dict[str, Any]) -> Profile:
                 expected=bool(e.get("expected", False)),
                 grade=_str(e.get("grade")),
                 highlights=_as_list(e.get("highlights"), f"{where}.highlights"),
+                short_name=_str(e.get("short_name")),
+                field_of_study=e.get("field_of_study") or "",
             )
         )
     if not education:

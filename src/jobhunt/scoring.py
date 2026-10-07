@@ -189,6 +189,27 @@ def _contract(job: Job, profile: Profile) -> tuple[float, str]:
     return 0.0, f"{job.employment_type.replace('_', '-')} ✗"
 
 
+def best_window(
+    job: Job, profile: Profile, today: dt.date | None = None
+) -> AvailabilityWindow | None:
+    """The availability window that best fits the job, or None if none fits.
+
+    Prefers windows whose remote constraint the job satisfies; for undated jobs any
+    such window qualifies.
+    """
+    today = today or dt.date.today()
+    windows = profile.preferences.availability
+    periods = [
+        p for p in extract_periods(f"{job.title}\n{job.description}", today) if p.end >= today
+    ]
+    if periods:
+        candidates = [w for w in windows if any(w.overlaps(p.start, p.end) for p in periods)]
+    else:
+        candidates = [w for w in windows if w.end >= today]
+    candidates.sort(key=lambda w: (w.remote_only and not job.is_remote, w.start))
+    return candidates[0] if candidates else None
+
+
 def _dates(
     job: Job, profile: Profile, today: dt.date
 ) -> tuple[float, str, list[AvailabilityWindow], str | None]:

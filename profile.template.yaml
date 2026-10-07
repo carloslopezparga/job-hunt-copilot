@@ -42,6 +42,10 @@ summaries:
 
 education:
   - institution: "Universidad Politécnica de Madrid — ETSII"
+    short_name: "ETSII-UPM"   # short form used in LinkedIn messages (300-char limit)
+    field_of_study:           # short field name used in messages
+      en: "Industrial Engineering"
+      es: "Ingeniería Industrial"
     degree:
       en: "TODO BSc in Industrial Technology Engineering"   # official title
       es: "TODO Grado en Ingeniería en Tecnologías Industriales"

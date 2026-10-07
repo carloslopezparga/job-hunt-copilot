@@ -24,6 +24,10 @@ summaries:
 
 education:
   - institution: "Universidad Politécnica de Madrid — ETSII"
+    short_name: "ETSII-UPM"
+    field_of_study:
+      en: "Industrial Engineering"
+      es: "Ingeniería Industrial"
     degree:
       en: "BSc in Industrial Technology Engineering"
       es: "Grado en Ingeniería en Tecnologías Industriales"

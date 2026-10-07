@@ -1,0 +1,13 @@
+{#- Cover letter (English). Every sentence is built from profile.yaml facts.
+    `level` (1-5) adds optional sentences; the generator picks the level that lands
+    in the 150-200 word range without inventing anything. -#}
+I am writing to apply for the {{ job.title }} position at {{ job.company }}. I am currently studying for a {{ degree }} at {{ institution }}{% if grad %}, graduating in {{ grad }}{% endif %}{% if level >= 4 and grade %}, with a grade of {{ grade }}{% endif %}.
+
+{% if exp -%}
+As {{ exp.title }} at {{ exp.organization }}, I {{ exp_bullets[0] }}.{% if level >= 2 and exp_bullets|length > 1 %} I also {{ exp_bullets[1] }}.{% endif %}{% if level >= 5 and other_exp %} Previously, as {{ other_exp.title }} at {{ other_exp.organization }}, I {{ other_exp_bullet }}.{% endif %}
+{%- endif %}{% if project %}{% if exp %} {% endif %}In my project "{{ project.title }}", I {{ project_bullets[0] }}.{% if level >= 3 and project_bullets|length > 1 %} I also {{ project_bullets[1] }}.{% endif %}{% endif %}
+
+{% if skills -%}
+This role draws on skills I list on my CV, including {{ skills }}.{% endif %}{% if level >= 3 and languages %} I speak {{ languages }}.{% endif %}{% if level >= 4 and achievement %} Achievements include: {{ achievement }}.{% endif %}{% if motivation %} {{ motivation }}{% endif %}
+
+{% if window %}I would be available from {{ window_start }} to {{ window_end }}{% if window.remote_only %}, working remotely alongside my studies{% endif %}. {% endif %}Thank you for considering my application; I would welcome the opportunity to discuss how I could contribute to {{ job.company }}.
