@@ -218,3 +218,11 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# --- job-hunt-copilot: personal data & generated material (never commit) ---
+profile.yaml
+output/
+data/
+*.db
+*.sqlite3
+applications.csv
