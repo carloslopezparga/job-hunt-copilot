@@ -1,0 +1,166 @@
+# Example profile for a FICTIONAL candidate. Used by the test-suite and the
+# offline demo. Do not put your data here: copy profile.template.yaml to
+# profile.yaml instead (git-ignored).
+
+personal:
+  full_name: "Alex Example Martín"
+  email: "alex.example@alumnos.upm.es"
+  phone: "+34 600 000 000"
+  location: "Madrid, Spain"
+  linkedin: "https://www.linkedin.com/in/alex-example"
+  github: "https://github.com/alex-example"
+  website: ""
+  work_authorization: ["EU"]
+
+summaries:
+  default:
+    en: "Third-year Industrial Engineering student at ETSII-UPM combining optimisation, statistics and Python to solve operational and financial problems."
+    es: "Estudiante de tercer curso de Ingeniería Industrial en la ETSII-UPM que combina optimización, estadística y Python para resolver problemas operativos y financieros."
+  quant_trading:
+    en: "Third-year Industrial Engineering student at ETSII-UPM with a strong quantitative background (probability, optimisation, time series) and hands-on Python backtesting projects."
+    es: "Estudiante de tercer curso de Ingeniería Industrial en la ETSII-UPM con sólida base cuantitativa (probabilidad, optimización, series temporales) y proyectos de backtesting en Python."
+  ai_tech:
+    en: "Third-year Industrial Engineering student at ETSII-UPM building machine learning projects in Python and PyTorch, focused on applied forecasting and computer vision."
+
+education:
+  - institution: "Universidad Politécnica de Madrid — ETSII"
+    degree:
+      en: "BSc in Industrial Technology Engineering"
+      es: "Grado en Ingeniería en Tecnologías Industriales"
+    location: "Madrid, Spain"
+    start: "2023-09"
+    end: "2027-06"
+    expected: true
+    grade: "8.1/10"
+    highlights:
+      - en: "Relevant coursework: Statistics, Operations Research, Numerical Methods, Control Engineering"
+        es: "Asignaturas relevantes: Estadística, Investigación Operativa, Métodos Numéricos, Ingeniería de Control"
+
+experience:
+  - organization: "UPM Motorsport (Formula Student team)"
+    role: "Data & Simulation Engineer"
+    location: "Madrid, Spain"
+    start: "2024-10"
+    end: "present"
+    bullets:
+      - en: "Built a Python lap-time simulator used by the team to compare gear ratios before track tests"
+        es: "Desarrollé un simulador de tiempo por vuelta en Python que el equipo usa para comparar relaciones de cambio antes de los test"
+      - en: "Automated telemetry cleaning with pandas, cutting post-test analysis from two days to half a day"
+        es: "Automaticé la limpieza de telemetría con pandas, reduciendo el análisis post-test de dos días a medio día"
+    skills: [Python, pandas, NumPy, simulation, data analysis]
+  - organization: "Academia Ejemplo"
+    role: "Mathematics & Physics Tutor (part-time)"
+    location: "Madrid, Spain"
+    start: "2023-10"
+    end: "2024-06"
+    bullets:
+      - en: "Tutored 12 high-school students weekly in calculus and mechanics"
+        es: "Impartí clases semanales de cálculo y mecánica a 12 alumnos de bachillerato"
+    skills: [communication, mathematics]
+
+projects:
+  - name: "Momentum backtester"
+    date: "2025-04"
+    url: "https://github.com/alex-example/momentum-backtester"
+    description:
+      en: "Event-driven backtesting engine for equity momentum strategies"
+      es: "Motor de backtesting por eventos para estrategias de momentum en renta variable"
+    bullets:
+      - en: "Implemented vectorised and event-driven backtests in Python with transaction costs and slippage"
+        es: "Implementé backtests vectorizados y por eventos en Python con costes de transacción y slippage"
+      - en: "Evaluated Sharpe ratio and drawdown statistics across 20 years of daily data"
+        es: "Evalué el ratio de Sharpe y el drawdown sobre 20 años de datos diarios"
+    skills: [Python, pandas, statistics, time series, backtesting, quantitative finance]
+  - name: "Demand forecasting with gradient boosting"
+    date: "2025-01"
+    url: ""
+    description:
+      en: "Course project forecasting weekly retail demand"
+      es: "Proyecto de asignatura para predecir la demanda semanal de un comercio"
+    bullets:
+      - en: "Trained LightGBM and PyTorch LSTM models; LightGBM gave the lowest validation error"
+        es: "Entrené modelos LightGBM y LSTM en PyTorch; LightGBM obtuvo el menor error de validación"
+    skills: [Python, machine learning, PyTorch, LightGBM, forecasting, SQL]
+  - name: "Warehouse slotting optimisation"
+    date: "2024-05"
+    url: ""
+    description:
+      en: "Mixed-integer model to assign products to warehouse locations"
+    bullets:
+      - en: "Formulated a MILP in Pyomo and solved it with HiGHS for a 500-SKU case study"
+    skills: [optimisation, Pyomo, operations research, supply chain, Excel]
+
+languages:
+  - language: "Spanish"
+    level: "native"
+    certificate: ""
+  - language: "English"
+    level: "C1"
+    certificate: "Cambridge C1 Advanced (2022)"
+  - language: "French"
+    level: "B1"
+    certificate: ""
+
+skills:
+  technical: [Python, SQL, MATLAB, C++, statistics, probability, machine learning, time series]
+  tools: [pandas, NumPy, PyTorch, scikit-learn, Git, Excel, Power BI, Pyomo]
+  domains: [optimisation, operations research, quantitative finance, forecasting, supply chain]
+
+achievements:
+  - en: "Finalist, ETSII Datathon 2025 (team of 4)"
+    es: "Finalista, Datathon ETSII 2025 (equipo de 4)"
+
+motivations:
+  ai_tech:
+    en: "I enjoy turning messy data into models that people actually use, as I did with our team's telemetry, and I want to learn how production ML systems are built and evaluated."
+    es: "Disfruto convirtiendo datos desordenados en modelos que la gente usa de verdad, como hice con la telemetría del equipo, y quiero aprender cómo se construyen y evalúan sistemas de ML en producción."
+  quant_trading:
+    en: "Building my own backtester taught me how much rigour separates a good-looking idea from a robust strategy, and I want to learn that discipline from practitioners."
+    es: "Construir mi propio backtester me enseñó cuánto rigor separa una idea atractiva de una estrategia robusta, y quiero aprender esa disciplina de profesionales."
+  fintech:
+    en: "I am drawn to products where engineering and finance meet, and where small improvements in data and automation reach many users at once."
+  consulting:
+    en: "Industrial engineering trained me to structure open problems and quantify trade-offs, which is exactly what I want to practise with real clients."
+
+preferences:
+  roles:
+    - machine learning
+    - data science
+    - data scientist
+    - software engineer
+    - quantitative
+    - quant
+    - trading
+    - trader
+    - investment banking
+    - strategy
+    - consulting
+    - analyst
+  sectors: [ai_tech, quant_trading, investment_banking, consulting, fintech]
+  contract_types: [internship]
+  exclude_title_keywords: [senior, staff, principal, lead, manager, director, head of, phd]
+  locations:
+    preferred: [London, Amsterdam, Zurich, Dublin, Paris, Berlin, Munich, New York, Singapore]
+    acceptable: [Europe, EMEA, Madrid, Barcelona, Lisbon]
+    avoid: []
+  availability:
+    - label: "Remote internship during the academic year"
+      start: "2026-10-01"
+      end: "2027-05-31"
+      remote_only: true
+    - label: "Summer / off-cycle internship 2027"
+      start: "2027-06-01"
+      end: "2027-12-31"
+      remote_only: false
+  application_languages: [en, es]
+
+scoring:
+  min_score_to_prepare: 65
+  weights:
+    role: 25
+    sector: 15
+    contract: 20
+    remote: 10
+    dates: 10
+    skills: 15
+    location: 5
