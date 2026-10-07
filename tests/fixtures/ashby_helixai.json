@@ -1,0 +1,106 @@
+{
+  "apiVersion": "1",
+  "jobs": [
+    {
+      "id": "a1b2c3d4-0001-4000-8000-000000000001",
+      "title": "Machine Learning Research Intern, Summer 2027",
+      "department": "Research",
+      "team": "Applied ML",
+      "employmentType": "Intern",
+      "location": "Zurich, Switzerland",
+      "secondaryLocations": [
+        {
+          "location": "London, United Kingdom",
+          "address": {
+            "postalAddress": {
+              "addressCountry": "United Kingdom",
+              "addressLocality": "London"
+            }
+          }
+        }
+      ],
+      "publishedAt": "2026-09-25T14:03:11.000+00:00",
+      "isListed": true,
+      "isRemote": false,
+      "workplaceType": "OnSite",
+      "address": {
+        "postalAddress": {
+          "addressCountry": "Switzerland",
+          "addressLocality": "Zurich",
+          "addressRegion": "Zurich"
+        }
+      },
+      "jobUrl": "https://jobs.ashbyhq.com/helixai/a1b2c3d4-0001-4000-8000-000000000001",
+      "applyUrl": "https://jobs.ashbyhq.com/helixai/a1b2c3d4-0001-4000-8000-000000000001/application",
+      "descriptionHtml": "<p>Helix AI builds foundation models for industrial forecasting. Our 12-week Summer 2027 research internship (June to September) pairs you with a research mentor.</p><ul><li>Train and evaluate PyTorch models on time series data</li><li>Run experiments and write up results</li></ul><p>You study engineering, mathematics or computer science and know Python and machine learning fundamentals.</p>",
+      "descriptionPlain": "Helix AI builds foundation models for industrial forecasting. Our 12-week Summer 2027 research internship (June to September) pairs you with a research mentor.\n- Train and evaluate PyTorch models on time series data\n- Run experiments and write up results\nYou study engineering, mathematics or computer science and know Python and machine learning fundamentals.",
+      "compensation": {
+        "compensationTierSummary": "CHF 6K per month",
+        "scrapeableCompensationSalarySummary": "CHF 6K/mo",
+        "compensationTiers": [],
+        "summaryComponents": []
+      }
+    },
+    {
+      "id": "a1b2c3d4-0002-4000-8000-000000000002",
+      "title": "Machine Learning Engineering Intern",
+      "department": "Engineering",
+      "team": "Platform",
+      "employmentType": "Intern",
+      "location": "Remote (EMEA)",
+      "secondaryLocations": [],
+      "publishedAt": "2026-09-29T09:00:00.000+00:00",
+      "isListed": true,
+      "isRemote": true,
+      "workplaceType": "Remote",
+      "jobUrl": "https://jobs.ashbyhq.com/helixai/a1b2c3d4-0002-4000-8000-000000000002",
+      "applyUrl": "https://jobs.ashbyhq.com/helixai/a1b2c3d4-0002-4000-8000-000000000002/application",
+      "descriptionHtml": "<p>Remote part-time internship (15-20h/week) starting as soon as possible.</p>",
+      "descriptionPlain": "Remote part-time internship (15-20h/week) starting as soon as possible. Help us build data pipelines in Python and SQL, containerise models with Docker and monitor forecasting accuracy. Experience with PyTorch or scikit-learn is a plus."
+    },
+    {
+      "id": "a1b2c3d4-0003-4000-8000-000000000003",
+      "title": "Staff Machine Learning Engineer",
+      "department": "Engineering",
+      "team": "Platform",
+      "employmentType": "FullTime",
+      "location": "San Francisco, CA",
+      "secondaryLocations": [],
+      "publishedAt": "2026-08-12T09:00:00.000+00:00",
+      "isListed": true,
+      "isRemote": false,
+      "workplaceType": "Hybrid",
+      "jobUrl": "https://jobs.ashbyhq.com/helixai/a1b2c3d4-0003-4000-8000-000000000003",
+      "descriptionPlain": "Lead the ML platform team. 8+ years of experience required."
+    },
+    {
+      "id": "a1b2c3d4-0004-4000-8000-000000000004",
+      "title": "Internal Tools Intern (unlisted)",
+      "department": "Engineering",
+      "team": "",
+      "employmentType": "Intern",
+      "location": "Zurich, Switzerland",
+      "publishedAt": "2026-09-01T09:00:00.000+00:00",
+      "isListed": false,
+      "isRemote": false,
+      "workplaceType": "OnSite",
+      "jobUrl": "https://jobs.ashbyhq.com/helixai/a1b2c3d4-0004-4000-8000-000000000004",
+      "descriptionPlain": "Hidden posting."
+    },
+    {
+      "id": "a1b2c3d4-0005-4000-8000-000000000005",
+      "title": "Machine Learning Research Intern - Summer 2027",
+      "department": "Research",
+      "team": "Applied ML",
+      "employmentType": "Intern",
+      "location": "Zurich, Switzerland",
+      "secondaryLocations": [],
+      "publishedAt": "2026-09-30T10:00:00.000+00:00",
+      "isListed": true,
+      "isRemote": false,
+      "workplaceType": "OnSite",
+      "jobUrl": "https://jobs.ashbyhq.com/helixai/a1b2c3d4-0005-4000-8000-000000000005",
+      "descriptionPlain": "Re-posted: 12-week Summer 2027 research internship in Zurich. Python, PyTorch and machine learning fundamentals."
+    }
+  ]
+}

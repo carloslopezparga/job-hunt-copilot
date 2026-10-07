@@ -1,0 +1,85 @@
+[
+  {
+    "additional": "<div>Paylane is an equal opportunity employer.</div>",
+    "additionalPlain": "Paylane is an equal opportunity employer.",
+    "categories": {
+      "commitment": "Internship",
+      "department": "Data",
+      "location": "Remote - Europe",
+      "team": "Data Science",
+      "allLocations": [
+        "Remote - Europe"
+      ]
+    },
+    "createdAt": 1790000000000,
+    "descriptionPlain": "Paylane is a payments fintech serving 40,000 European SMEs. We are looking for a Data Science intern to join us remotely for 6 months starting November 2026 (part-time, 20h/week, compatible with university studies).",
+    "description": "<div>Paylane is a payments fintech serving 40,000 European SMEs. We are looking for a Data Science intern to join us remotely for 6 months starting November 2026 (part-time, 20h/week, compatible with university studies).</div>",
+    "id": "5f1c2b9e-1111-4a2b-9c3d-aaaaaaaaaaaa",
+    "lists": [
+      {
+        "text": "What you'll do",
+        "content": "<li>Build fraud-detection features with Python and SQL</li><li>Evaluate machine learning models with scikit-learn</li><li>Create dashboards in Power BI for the risk team</li>"
+      },
+      {
+        "text": "What we're looking for",
+        "content": "<li>Student in engineering, statistics or computer science</li><li>Solid Python, pandas and SQL</li><li>Fluent English; Spanish or French is a plus</li>"
+      }
+    ],
+    "text": "Data Science Intern (Remote)",
+    "country": "ES",
+    "workplaceType": "remote",
+    "hostedUrl": "https://jobs.eu.lever.co/paylane/5f1c2b9e-1111-4a2b-9c3d-aaaaaaaaaaaa",
+    "applyUrl": "https://jobs.eu.lever.co/paylane/5f1c2b9e-1111-4a2b-9c3d-aaaaaaaaaaaa/apply"
+  },
+  {
+    "additionalPlain": "",
+    "categories": {
+      "commitment": "Full-time",
+      "department": "Engineering",
+      "location": "Paris, France",
+      "team": "Payments Core",
+      "allLocations": [
+        "Paris, France",
+        "Berlin, Germany"
+      ]
+    },
+    "createdAt": 1788000000000,
+    "descriptionPlain": "We are hiring a Backend Engineer with 3+ years of experience in Go or Java to scale our payments platform.",
+    "id": "5f1c2b9e-2222-4a2b-9c3d-bbbbbbbbbbbb",
+    "lists": [
+      {
+        "text": "Requirements",
+        "content": "<li>3+ years building distributed systems</li><li>Go, Java or Kotlin</li>"
+      }
+    ],
+    "text": "Backend Engineer",
+    "workplaceType": "hybrid",
+    "hostedUrl": "https://jobs.eu.lever.co/paylane/5f1c2b9e-2222-4a2b-9c3d-bbbbbbbbbbbb",
+    "applyUrl": "https://jobs.eu.lever.co/paylane/5f1c2b9e-2222-4a2b-9c3d-bbbbbbbbbbbb/apply"
+  },
+  {
+    "additionalPlain": "Ofrecemos ayuda al estudio y horario flexible.",
+    "categories": {
+      "commitment": "Internship",
+      "department": "Strategy & Operations",
+      "location": "Madrid, Spain",
+      "team": "Business Operations",
+      "allLocations": [
+        "Madrid, Spain"
+      ]
+    },
+    "createdAt": 1789000000000,
+    "descriptionPlain": "Buscamos un estudiante en prácticas para el equipo de Estrategia y Operaciones en Madrid, con incorporación en junio de 2027 durante 6 meses. Trabajarás con datos de clientes, Excel y SQL para analizar la rentabilidad de nuevos mercados.",
+    "id": "5f1c2b9e-3333-4a2b-9c3d-cccccccccccc",
+    "lists": [
+      {
+        "text": "Requisitos",
+        "content": "<li>Estudiante de ingeniería o ADE</li><li>Excel avanzado y nociones de SQL</li><li>Inglés C1</li>"
+      }
+    ],
+    "text": "Prácticas Strategy & Operations",
+    "workplaceType": "onsite",
+    "hostedUrl": "https://jobs.eu.lever.co/paylane/5f1c2b9e-3333-4a2b-9c3d-cccccccccccc",
+    "applyUrl": "https://jobs.eu.lever.co/paylane/5f1c2b9e-3333-4a2b-9c3d-cccccccccccc/apply"
+  }
+]

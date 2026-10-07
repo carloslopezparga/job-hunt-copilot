@@ -1,0 +1,61 @@
+# Companies whose PUBLIC job boards the copilot reads.
+#
+#   name:    display name
+#   ats:     greenhouse | lever | ashby
+#   slug:    board token / handle as it appears in the public careers URL
+#              greenhouse -> boards.greenhouse.io/<slug>  or job-boards.greenhouse.io/<slug>
+#              lever      -> jobs.lever.co/<slug>  (jobs.eu.lever.co/<slug> => region: eu)
+#              ashby      -> jobs.ashbyhq.com/<slug>
+#   sector:  ai_tech | quant_trading | investment_banking | consulting | fintech
+#   region:  (lever only) "eu" for EU-hosted Lever accounts
+#
+# Slugs were compiled from public careers pages but have NOT been verified
+# against the live APIs yet (the dev environment had no internet access).
+# Run `jobhunt discover` once online: boards that return 404 are reported and
+# should be fixed or removed here. Companies change ATS from time to time.
+#
+# Note on investment banking and MBB consulting: bulge-bracket banks and
+# McKinsey/BCG/Bain recruit through Workday/Oracle/in-house portals, which have
+# no public JSON API. Track those with `jobhunt add` (manual entry) instead.
+
+companies:
+  # ---------------------------------------------------------------- AI / tech
+  - {name: Anthropic,        ats: greenhouse, slug: anthropic,   sector: ai_tech}
+  - {name: Google DeepMind,  ats: greenhouse, slug: deepmind,    sector: ai_tech}
+  - {name: OpenAI,           ats: ashby,      slug: openai,      sector: ai_tech}
+  - {name: Mistral AI,       ats: lever,      slug: mistral,     sector: ai_tech}
+  - {name: Cohere,           ats: ashby,      slug: cohere,      sector: ai_tech}
+  - {name: ElevenLabs,       ats: ashby,      slug: elevenlabs,  sector: ai_tech}
+  - {name: Perplexity,       ats: ashby,      slug: perplexity,  sector: ai_tech}
+  - {name: Synthesia,        ats: ashby,      slug: synthesia,   sector: ai_tech}
+  - {name: Scale AI,         ats: greenhouse, slug: scaleai,     sector: ai_tech}
+  - {name: Databricks,       ats: greenhouse, slug: databricks,  sector: ai_tech}
+  - {name: Datadog,          ats: greenhouse, slug: datadog,     sector: ai_tech}
+  - {name: Palantir,         ats: lever,      slug: palantir,    sector: ai_tech}
+
+  # ------------------------------------------------------------------ fintech
+  - {name: Stripe,           ats: greenhouse, slug: stripe,      sector: fintech}
+  - {name: Adyen,            ats: greenhouse, slug: adyen,       sector: fintech}
+  - {name: Monzo,            ats: greenhouse, slug: monzo,       sector: fintech}
+  - {name: N26,              ats: greenhouse, slug: n26,         sector: fintech}
+  - {name: Coinbase,         ats: greenhouse, slug: coinbase,    sector: fintech}
+  - {name: Robinhood,        ats: greenhouse, slug: robinhood,   sector: fintech}
+  - {name: Brex,             ats: greenhouse, slug: brex,        sector: fintech}
+  - {name: Ramp,             ats: ashby,      slug: ramp,        sector: fintech}
+  - {name: Plaid,            ats: lever,      slug: plaid,       sector: fintech}
+  - {name: Qonto,            ats: lever,      slug: qonto,       sector: fintech}
+
+  # ----------------------------------------------------------- quant / trading
+  - {name: Hudson River Trading, ats: greenhouse, slug: wehrtyou,               sector: quant_trading}
+  - {name: Jump Trading,         ats: greenhouse, slug: jumptrading,            sector: quant_trading}
+  - {name: IMC Trading,          ats: greenhouse, slug: imc,                    sector: quant_trading}
+  - {name: Tower Research Capital, ats: greenhouse, slug: towerresearchcapital, sector: quant_trading}
+  - {name: Akuna Capital,        ats: greenhouse, slug: akunacapital,           sector: quant_trading}
+  - {name: DRW,                  ats: greenhouse, slug: drweng,                 sector: quant_trading}
+  - {name: XTX Markets,          ats: greenhouse, slug: xtxmarketstechnologies, sector: quant_trading}
+  - {name: Belvedere Trading,    ats: greenhouse, slug: belvederetrading,       sector: quant_trading}
+
+  # --------------------------------------------------------------- consulting
+  - {name: Thoughtworks,     ats: greenhouse, slug: thoughtworks, sector: consulting}
+  - {name: Faculty,          ats: ashby,      slug: faculty,      sector: consulting,
+     notes: "AI consultancy (London)"}

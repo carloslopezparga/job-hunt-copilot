@@ -1,0 +1,8 @@
+# Fictional companies matching the JSON fixtures in this directory.
+# Offline demo:  jobhunt discover --companies tests/fixtures/companies.sample.yaml --fixtures tests/fixtures
+companies:
+  - {name: Northwind Quant, ats: greenhouse, slug: northwindquant, sector: quant_trading}
+  - {name: Paylane,         ats: lever,      slug: paylane,        sector: fintech, region: eu}
+  - {name: Helix AI,        ats: ashby,      slug: helixai,        sector: ai_tech}
+  - {name: Ghost Corp,      ats: greenhouse, slug: ghostcorp,      sector: consulting,
+     notes: "No fixture on purpose: exercises per-board error handling"}
