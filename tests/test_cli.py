@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+import json
 import shutil
 
 import pytest
@@ -198,3 +199,106 @@ def test_check_boards_and_promote(env, fixtures_dir, tmp_path):
     assert "Added 1 company" in result.output and "discarded 2" in result.output
     assert "slug: paylane" in target.read_text()
     assert "emptyco" not in target.read_text()
+
+
+# --------------------------------------------------------------------------------- run
+
+
+def add_posting(fixtures_copy, title, location):
+    """Simulate a new posting appearing on Paylane's board between two runs."""
+    path = fixtures_copy / "lever_paylane.json"
+    data = json.loads(path.read_text(encoding="utf-8"))
+    new = dict(data[0])
+    new.update(id=f"new-{len(data)}", text=title, workplaceType="onsite",
+               hostedUrl=f"https://jobs.eu.lever.co/paylane/new-{len(data)}",
+               categories={**data[0]["categories"], "location": location,
+                           "allLocations": [location]})  # fmt: skip
+    data.append(new)
+    path.write_text(json.dumps(data), encoding="utf-8")
+
+
+@pytest.fixture
+def fixtures_copy(fixtures_dir, tmp_path):
+    target = tmp_path / "fx"
+    shutil.copytree(fixtures_dir, target)
+    return target
+
+
+def test_run_shows_only_new_offers(env, fixtures_copy):
+    first = run("run", "--fixtures", str(fixtures_copy))
+    assert first.exit_code == 0, first.output
+    assert "Data Science Intern (Remote)" in first.output
+    assert "Quantitative Research Intern - Summer 2027" not in first.output  # UK visa
+    assert "Senior Quantitative Developer" not in first.output  # below threshold
+
+    second = run("run", "--fixtures", str(fixtures_copy))
+    assert "0 new offer(s)" in second.output
+
+    add_posting(fixtures_copy, "Business Analyst Intern - Summer 2027", "Madrid, Spain")
+    add_posting(fixtures_copy, "Data Analyst Intern - Summer 2027", "New York, NY")
+    third = run("run", "--fixtures", str(fixtures_copy))
+    assert "1 new offer(s)" in third.output
+    assert "Business Analyst Intern - Summer 2027" in third.output
+    assert "Data Analyst Intern - Summer 2027" not in third.output  # needs a US visa
+
+
+def test_run_ignores_jobs_tracked_before_first_run(env, fixtures_copy):
+    run("discover", "--fixtures", str(fixtures_copy))
+    with Tracker(env / "data" / "jobhunt.db") as tracker:  # simulate a pre-v2 database
+        tracker.conn.execute("UPDATE jobs SET first_seen_at = NULL")
+        tracker.conn.commit()
+    result = run("run", "--fixtures", str(fixtures_copy))
+    assert "First run" in result.output and "0 new offer(s)" in result.output
+
+
+def test_run_export_and_prepare(env, fixtures_copy):
+    result = run("run", "--fixtures", str(fixtures_copy), "--prepare",
+                 "--export", "shortlist.md")  # fmt: skip
+    assert result.exit_code == 0, result.output
+    md = (env / "shortlist.md").read_text(encoding="utf-8")
+    assert "# Job shortlist" in md and "Data Science Intern (Remote)" in md
+    assert "https://jobs.eu.lever.co/paylane/" in md and "**Why:**" in md
+    assert "**Prepared material:**" in md
+    assert list((env / "output").glob("*/cv_*.pdf"))
+
+
+def test_run_prepare_refuses_todo_profile(env, fixtures_copy, root):
+    result = run("--profile", str(root / "profile.template.yaml"), "run",
+                 "--fixtures", str(fixtures_copy), "--prepare")  # fmt: skip
+    assert result.exit_code == 0
+    assert "TODO field(s)" in result.output and "nothing was generated" in result.output
+    assert not (env / "output").exists()
+
+
+def test_run_notify_without_credentials_still_works(env, fixtures_copy, monkeypatch):
+    monkeypatch.delenv("TELEGRAM_BOT_TOKEN", raising=False)
+    monkeypatch.delenv("TELEGRAM_CHAT_ID", raising=False)
+    result = run("run", "--fixtures", str(fixtures_copy), "--notify", "telegram")
+    assert result.exit_code == 0
+    assert "no notification sent" in result.output
+
+
+def test_run_notify_telegram_with_fake_http(env, fixtures_copy, monkeypatch):
+    calls = []
+
+    def fake_post(self, url, body, headers):
+        calls.append((url, body))
+        return {"ok": True}
+
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "999:fake")
+    monkeypatch.setenv("TELEGRAM_CHAT_ID", "42")
+    monkeypatch.setattr("jobhunt.notify.UrllibPoster.post", fake_post)
+    monkeypatch.setattr("jobhunt.notify.TelegramNotifier.delay", 0)
+    result = run("run", "--fixtures", str(fixtures_copy), "--notify", "telegram", "--prepare")
+    assert result.exit_code == 0, result.output
+    messages = [b for u, b in calls if u.endswith("/sendMessage")]
+    documents = [b for u, b in calls if u.endswith("/sendDocument")]
+    assert messages and len(documents) == 2 * len(messages)  # CV + letter per offer
+    assert all(u.startswith("https://api.telegram.org/bot999:fake/") for u, _ in calls)
+    assert "Telegram: notified" in result.output
+    again = run("run", "--fixtures", str(fixtures_copy), "--notify", "telegram")
+    assert "Nothing new to notify" in again.output
+
+
+def test_run_rejects_unknown_notifier(env, fixtures_copy):
+    assert run("run", "--fixtures", str(fixtures_copy), "--notify", "email").exit_code == 1
