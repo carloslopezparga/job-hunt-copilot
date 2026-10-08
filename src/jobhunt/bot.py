@@ -285,7 +285,8 @@ class Bot:
 
     def _send_offers(self, records: list[JobRecord], profile: Profile, empty: str) -> None:
         if not records:
-            self._say(empty)
+            if empty:
+                self._say(empty)
             return
         shown = records[: self.cfg.max_offers]
         for i, record in enumerate(shown):

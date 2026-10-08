@@ -77,6 +77,8 @@ class FakeTelegram:
         return list(ready)
 
     def send_message(self, chat_id, text, buttons=None):
+        if not text.strip():  # Telegram rejects these
+            raise NotifyError("Telegram sendMessage failed: Bad Request: message text is empty")
         self.messages.append({"chat": chat_id, "text": text, "buttons": buttons,
                               "id": len(self.messages) + 1})  # fmt: skip
         return len(self.messages)
