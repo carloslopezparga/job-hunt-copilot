@@ -62,7 +62,7 @@ def test_score_lists_best_matches(env, fixtures_dir):
     assert result.exit_code == 0
     assert "Scored 11 job(s)" in result.output
     assert "Quantitative Research Intern - Summer 2027" in result.output
-    assert "jobhunt prepare 1" in result.output
+    assert "jobhunt prepare " in result.output
     assert "Scored 0 job(s)" in run("score").output
     assert "Scored 11 job(s)" in run("score", "--rescore").output
 
@@ -88,7 +88,7 @@ def test_prepare_status_followups_export(env, fixtures_dir):
     assert run("export", str(out)).exit_code == 0
     rows = list(csv.DictReader(out.open(encoding="utf-8")))
     assert len(rows) == 11
-    assert rows[0]["status"] == "applied"
+    assert next(r for r in rows if r["id"] == "1")["status"] == "applied"
 
 
 def test_prepare_top_and_spanish(env, fixtures_dir):

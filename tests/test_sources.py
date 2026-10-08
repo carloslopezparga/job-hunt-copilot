@@ -216,6 +216,9 @@ def test_normalize_employment(explicit, title, expected):
         ("hybrid", (), "hybrid"),
         (None, ("Data Intern", "Remote - EU"), "remote"),
         (None, ("Data Intern", "London"), "unknown"),
+        (None, ("Data Intern", "Hybrid - Madrid"), "hybrid"),
+        (None, ("Data Intern", "Madrid (híbrido)"), "hybrid"),
+        (None, ("Data Intern", "Remote - Spain; Hybrid - Madrid"), "remote"),
     ],
 )
 def test_normalize_workplace(explicit, texts, expected):

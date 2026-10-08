@@ -9,6 +9,7 @@ from jobhunt.models import Job
 from jobhunt.profile import AvailabilityWindow
 from jobhunt.scoring import (
     EXCLUDED_CAP,
+    VISA_CAP,
     dedup_key,
     deduplicate,
     extract_periods,
@@ -29,8 +30,8 @@ def make_job(**overrides) -> Job:
         sector="quant_trading",
         title="Quantitative Research Intern - Summer 2027",
         url="https://example.test/1",
-        location="London, United Kingdom",
-        locations=["London, United Kingdom"],
+        location="Madrid, Spain",
+        locations=["Madrid, Spain"],
         workplace_type="onsite",
         employment_type="internship",
         description="Summer 2027 internship. Python, statistics, probability, C++, pandas.",
@@ -113,20 +114,63 @@ def test_sector_not_wanted(profile):
     assert score_job(make_job(), p, TODAY).components["sector"] == 0.0
 
 
-def test_location_preference_and_visa_hint(profile):
-    zurich = score_job(make_job(location="Zurich, Switzerland", locations=[]), profile, TODAY)
-    london = score_job(make_job(), profile, TODAY)
-    ny = score_job(make_job(location="New York, NY", locations=[]), profile, TODAY)
-    unknown = score_job(make_job(location="Tallinn, Estonia", locations=[]), profile, TODAY)
-    assert zurich.components["location"] == 1.0
-    assert london.components["location"] < 1.0 and "UK visa" in london.explanation
-    assert ny.components["location"] == 0.5 and "US visa" in ny.explanation
-    assert unknown.components["location"] == pytest.approx(0.3)
+def test_location_tiers_and_visa(profile):
+    def score(location, **kw):
+        return score_job(make_job(location=location, locations=[], **kw), profile, TODAY)
+
+    madrid = score("Madrid, Spain")
+    barcelona = score("Barcelona, Spain")
+    amsterdam = score("Amsterdam, Netherlands")
+    tallinn = score("Tallinn, Estonia")
+    seoul = score("Seoul")
+    unknown_city = score("Springfield")
+    london = score("London, United Kingdom")
+    ny = score("New York, NY")
+
+    assert madrid.location.tier == "preferred" and madrid.components["location"] == 1.0
+    assert barcelona.location.tier == amsterdam.location.tier == "acceptable"
+    assert tallinn.location.tier == "acceptable"  # EU country
+    assert unknown_city.location.tier == "unknown"
+    assert madrid.score > barcelona.score > unknown_city.score
+    # outside every list and no visa problem: allowed but clearly lower
+    zurich = score("Zurich, Switzerland")
+    assert zurich.location.tier == "other"
+    assert barcelona.score - zurich.score >= 15
+    # visa needed: capped, never near the top
+    for result in (london, ny, seoul):
+        assert result.location.tier == "visa"
+        assert result.score <= VISA_CAP
+        assert "visa needed" in result.explanation
+    assert "visa needed: GB" in london.explanation and "visa needed: US" in ny.explanation
+
+
+def test_visa_is_not_needed_when_authorized(profile):
+    p = copy.deepcopy(profile)
+    p.personal.work_authorization = ["EU", "UK"]
+    london = score_job(make_job(location="London, United Kingdom", locations=[]), p, TODAY)
+    assert london.location.tier == "other" and london.score > VISA_CAP
+
+
+def test_multi_location_job_counts_best_place(profile):
+    job = make_job(location="New York, NY; London, UK; Madrid, Spain", locations=[])
+    result = score_job(job, profile, TODAY)
+    assert result.location.tier == "preferred"
+    assert "Madrid, Spain (preferred, +2 more)" in result.explanation
+
+
+def test_remote_eu_job_is_acceptable_and_remote(profile):
+    job = make_job(location="Remote - EU", locations=[], workplace_type="unknown")
+    result = score_job(job, profile, TODAY)
+    assert result.location.tier == "acceptable"
+    assert result.location.remote
+    assert result.components["remote"] == 1.0
+    us_remote = score_job(make_job(location="Remote - US", locations=[]), profile, TODAY)
+    assert us_remote.location.tier == "visa" and us_remote.score <= VISA_CAP
 
 
 def test_location_avoid_list(profile):
     p = copy.deepcopy(profile)
-    p.preferences.locations.avoid = ["London"]
+    p.preferences.locations.avoid = ["Madrid"]
     assert score_job(make_job(), p, TODAY).components["location"] < 0.2
 
 
@@ -221,8 +265,11 @@ def test_rank_on_fixtures(profile, fixture_jobs):
     scores = [r.score for _, r in ranked]
     assert scores == sorted(scores, reverse=True)
     top_titles = [j.title for j, r in ranked if r.score >= 65]
-    assert "Data Science Intern (Remote)" in top_titles
-    assert "Quantitative Research Intern - Summer 2027" in top_titles
+    assert "Data Science Intern (Remote)" in top_titles  # Remote - Europe
+    assert "Prácticas Strategy & Operations" in top_titles  # Madrid
+    # London internship needs a UK visa for an EU-only candidate: capped, out of the top
+    london = next(r for j, r in ranked if j.title == "Quantitative Research Intern - Summer 2027")
+    assert london.score <= VISA_CAP and london.location.tier == "visa"
     bottom = {j.title for j, r in ranked if r.score <= EXCLUDED_CAP}
     assert bottom == {
         "Senior Quantitative Developer",

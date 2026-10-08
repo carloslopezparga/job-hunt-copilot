@@ -7,6 +7,8 @@ parses and checks it; it never adds, rewrites or embellishes any content.
 from __future__ import annotations
 
 import datetime as dt
+import hashlib
+import json
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -132,10 +134,23 @@ class AvailabilityWindow:
 
 
 @dataclass
+class RunFilter:
+    """Which offers `jobhunt run` shortlists (on top of min_score_to_prepare)."""
+
+    no_visa: bool = True  # drop offers whose every location needs a visa you lack
+    remote_only: bool = False
+    tiers: list[str] = field(default_factory=lambda: ["preferred", "acceptable", "other"])
+
+
+LOCATION_TIERS = ("preferred", "acceptable", "other", "unknown", "avoided", "visa")
+
+
+@dataclass
 class LocationPrefs:
     preferred: list[str] = field(default_factory=list)
     acceptable: list[str] = field(default_factory=list)
     avoid: list[str] = field(default_factory=list)
+    run_filter: RunFilter = field(default_factory=RunFilter)
 
 
 @dataclass
@@ -174,6 +189,11 @@ class Profile:
         if sector and sector in self.summaries:
             return self.summaries[sector]
         return self.summaries.get("default", "")
+
+    def fingerprint(self) -> str:
+        """Stable hash of the profile content (comments and key order do not matter)."""
+        canonical = json.dumps(self.raw, sort_keys=True, ensure_ascii=False, default=str)
+        return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
     def placeholders(self) -> list[str]:
         """Dotted paths of fields that still contain the TODO placeholder."""
@@ -234,6 +254,21 @@ def _find_placeholders(node: Any, path: str = "") -> list[str]:
     elif isinstance(node, str) and PLACEHOLDER_MARKER in node:
         found.append(path)
     return found
+
+
+def _parse_run_filter(value: Any) -> RunFilter:
+    where = "preferences.locations.run_filter"
+    raw = _as_dict(value, where)
+    default = RunFilter()
+    tiers = _str_list(raw.get("tiers", default.tiers), f"{where}.tiers")
+    unknown = sorted(set(tiers) - set(LOCATION_TIERS))
+    if unknown:
+        raise ProfileError(f"unknown tier(s) {unknown} in {where}.tiers; valid: {LOCATION_TIERS}")
+    return RunFilter(
+        no_visa=bool(raw.get("no_visa", default.no_visa)),
+        remote_only=bool(raw.get("remote_only", default.remote_only)),
+        tiers=tiers,
+    )
 
 
 def parse_profile(data: dict[str, Any]) -> Profile:
@@ -372,6 +407,7 @@ def parse_profile(data: dict[str, Any]) -> Profile:
             preferred=_str_list(loc_raw.get("preferred"), "preferences.locations.preferred"),
             acceptable=_str_list(loc_raw.get("acceptable"), "preferences.locations.acceptable"),
             avoid=_str_list(loc_raw.get("avoid"), "preferences.locations.avoid"),
+            run_filter=_parse_run_filter(loc_raw.get("run_filter")),
         ),
         availability=windows,
         application_languages=_str_list(

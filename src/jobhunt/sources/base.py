@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import Any, Protocol
 
 from jobhunt.models import Company, Job
-from jobhunt.textutils import looks_like_internship, looks_remote
+from jobhunt.textutils import contains_term, looks_like_internship, looks_remote
 
 USER_AGENT = "job-hunt-copilot/0.1 (+personal internship search; human-in-the-loop)"
 
@@ -126,6 +126,8 @@ def normalize_workplace(explicit: str | None, *texts: str) -> str:
         return "onsite"
     if looks_remote(*texts):
         return "remote"
+    if any(contains_term(t, term) for t in texts if t for term in ("hybrid", "híbrido")):
+        return "hybrid"  # e.g. "Hybrid - Madrid"
     return "unknown"
 
 
