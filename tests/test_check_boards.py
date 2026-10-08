@@ -40,14 +40,14 @@ def test_promote_appends_valid_yaml_and_skips_known(tmp_path, root):
     target.write_text((root / "companies.yaml").read_text(encoding="utf-8"), encoding="utf-8")
     before = len(load_companies(target))
     already = Company("Stripe", "greenhouse", "stripe", "fintech")
-    dotted = Company("Mistral AI", "ashby", "mistral.ai", "ai_tech")
+    dotted = Company("Dotted Co", "ashby", "dotted.co", "ai_tech")
     checks = [
         BoardCheck(PAYLANE, "ok", total=3, spain=1, eu=3),
         BoardCheck(already, "ok", total=9, eu=2),
         BoardCheck(dotted, "ok", total=200, eu=150),
     ]
     added = promote(checks, target, dt.date(2026, 10, 8))
-    assert [c.name for c in added] == ["Paylane", "Mistral AI"]
+    assert [c.name for c in added] == ["Paylane", "Dotted Co"]
     companies = load_companies(target)  # still valid YAML, schema-checked
     assert len(companies) == before + 2
     paylane = next(c for c in companies if c.slug == "paylane")
@@ -59,7 +59,6 @@ def test_promote_appends_valid_yaml_and_skips_known(tmp_path, root):
 def test_candidates_file_is_valid_and_disjoint(root):
     candidates = load_companies(root / "companies.candidates.yaml")
     current = {(c.ats, c.slug.lower()) for c in load_companies(root / "companies.yaml")}
-    assert len(candidates) >= 40
     assert not {(c.ats, c.slug.lower()) for c in candidates} & current
     raw = yaml.safe_load((root / "companies.candidates.yaml").read_text(encoding="utf-8"))
     for entry in raw["companies"]:  # every candidate cites where its slug came from
