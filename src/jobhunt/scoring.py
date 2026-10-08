@@ -12,13 +12,21 @@ import datetime as dt
 import re
 from dataclasses import dataclass, field
 
+from jobhunt.languages import missing_languages
 from jobhunt.location import LocationAssessment, assess
 from jobhunt.models import Job
 from jobhunt.profile import AvailabilityWindow, Profile
-from jobhunt.textutils import contains_term, find_terms, fold, looks_like_internship, normalize_key
+from jobhunt.textutils import (
+    contains_term,
+    find_roles,
+    find_terms,
+    fold,
+    looks_like_internship,
+    normalize_key,
+)
 
 # Bump when scoring logic changes so stored scores are recomputed automatically.
-SCORING_VERSION = "3"
+SCORING_VERSION = "4"
 
 DEFAULT_WEIGHTS: dict[str, float] = {
     "role": 20,
@@ -31,16 +39,23 @@ DEFAULT_WEIGHTS: dict[str, float] = {
 }
 EXCLUDED_CAP = 15
 VISA_CAP = 30  # below any sensible min_score_to_prepare: never shortlisted
+HARD_CAP = 40  # failed hard requirements (availability, contract, language): never shortlisted
 SKILLS_FOR_FULL_MARKS = 5
 
-# Location tier -> (component value, multiplier on the final score). The multiplier makes
-# the location priority bite even when a profile gives the location weight little room.
-LOCATION_TIERS: dict[str, tuple[float, float]] = {
-    "preferred": (1.0, 1.0),
-    "acceptable": (0.7, 0.95),
-    "unknown": (0.4, 0.9),
-    "other": (0.3, 0.8),
-    "avoided": (0.1, 0.6),
+# Location level -> (component value, multiplier on the final score). The multiplier makes
+# the priority Madrid > rest of Spain > remote from Spain/EU > EU on site > rest bite even
+# when a profile gives the location weight little room.
+LOCATION_LEVELS: dict[str, tuple[float, float]] = {
+    "home": (1.0, 1.0),
+    "country": (0.8, 0.92),
+    "remote": (0.65, 0.88),
+    "abroad": (0.45, 0.8),
+    "other": (0.2, 0.55),
+}
+# Places that fit no level: the posting gives none, or the candidate avoids them.
+LOCATION_FALLBACK: dict[str, tuple[float, float]] = {
+    "unknown": (0.4, 0.8),
+    "avoided": (0.1, 0.5),
     "visa": (0.0, 1.0),  # capped at VISA_CAP instead
 }
 
@@ -52,10 +67,12 @@ class ScoreResult:
     notes: dict[str, str] = field(default_factory=dict)
     excluded: str | None = None
     location: LocationAssessment | None = None
+    caps: list[str] = field(default_factory=list)  # hard requirements the offer fails
 
     @property
     def explanation(self) -> str:
         parts = [f"excluded: {self.excluded}"] if self.excluded else []
+        parts += [f"max {HARD_CAP}: {reason}" for reason in self.caps]
         parts += [note for note in self.notes.values() if note]
         return " · ".join(parts)
 
@@ -155,10 +172,10 @@ def _role(job: Job, profile: Profile) -> tuple[float, str]:
     roles = profile.preferences.roles
     if not roles:
         return 0.5, "role: no preferences set"
-    in_title = find_terms(job.title, roles)
+    in_title = find_roles(job.title, roles)
     if in_title:
         return 1.0, f"role '{in_title[0]}' ✓"
-    in_desc = find_terms(job.description, roles)
+    in_desc = find_roles(job.description, roles)
     if in_desc:
         return 0.4, f"role '{in_desc[0]}' in description"
     return 0.0, "role ✗"
@@ -172,20 +189,47 @@ def _sector(job: Job, profile: Profile) -> tuple[float, str]:
     return 0.0, f"{job.sector} ✗"
 
 
-def _contract(job: Job, profile: Profile) -> tuple[float, str]:
+NEW_GRAD_TERMS = [
+    "new grad", "new graduate", "graduate", "entry level", "entry-level", "junior",
+    "recien graduado", "recien titulado",
+]  # fmt: skip
+_YEARS_RE = re.compile(
+    r"(\d{1,2})\s*\+?\s*(?:(?:-|to|a)\s*\d{1,2}\s*)?(?:years?|anos)\b[^.\n]{0,40}?"
+    r"(?:experience|experiencia)"
+)
+
+
+def _min_years_required(text: str) -> int:
+    years = [int(m.group(1)) for m in _YEARS_RE.finditer(fold(text))]
+    return max(years, default=0)
+
+
+def _contract(job: Job, profile: Profile) -> tuple[float, str, str | None]:
+    """Returns (value, note, hard-cap reason). The offer is capped when the profile asks
+    for an internship and the posting is a full-time, new-grad or otherwise permanent role."""
     wanted = set(profile.preferences.contract_types)
     is_intern = job.employment_type == "internship" or looks_like_internship(job.title)
     if is_intern:
-        return (1.0, "internship ✓") if "internship" in wanted else (0.2, "internship ✗")
+        if "internship" in wanted:
+            return 1.0, "internship ✓", None
+        return 0.2, "internship ✗", None
     if job.employment_type in wanted:
-        return 1.0, f"{job.employment_type} ✓"
-    if job.employment_type == "unknown":
-        if "internship" in wanted and looks_like_internship(job.description[:1500]):
-            return 0.5, "contract unclear (mentions internship)"
-        if find_terms(job.description[:1500], ["full-time", "full time", "permanent"]):
-            return 0.05, "likely full-time ✗"
-        return 0.2, "contract unclear"
-    return 0.0, f"{job.employment_type.replace('_', '-')} ✗"
+        return 1.0, f"{job.employment_type} ✓", None
+    only_interns = "internship" in wanted
+    if job.employment_type != "unknown":
+        label = job.employment_type.replace("_", "-")
+        return 0.0, f"{label} ✗", f"{label} role, internship wanted" if only_interns else None
+    head = job.description[:1500]
+    if find_terms(job.title, NEW_GRAD_TERMS):
+        return 0.0, "new grad ✗", "new-grad role, internship wanted" if only_interns else None
+    if _min_years_required(job.description) >= 2:
+        reason = "needs experience, internship wanted" if only_interns else None
+        return 0.05, "experience required ✗", reason
+    if only_interns and looks_like_internship(head):
+        return 0.5, "contract unclear (mentions internship)", None
+    full_time = find_terms(head, ["full-time", "full time", "permanent"])
+    reason = "no sign of an internship" if only_interns else None
+    return (0.05, "likely full-time ✗", reason) if full_time else (0.2, "contract unclear", reason)
 
 
 def best_window(
@@ -268,9 +312,38 @@ def assess_location(job: Job, profile: Profile) -> LocationAssessment:
     )
 
 
+def _location_scores(assessment: LocationAssessment) -> tuple[float, float]:
+    """(component value, multiplier) for the assessed place."""
+    if assessment.level in LOCATION_LEVELS:
+        return LOCATION_LEVELS[assessment.level]
+    return LOCATION_FALLBACK.get(assessment.tier, LOCATION_FALLBACK["unknown"])
+
+
 def _location(assessment: LocationAssessment) -> tuple[float, str]:
-    value, _ = LOCATION_TIERS[assessment.tier]
-    return value, assessment.label()
+    return _location_scores(assessment)[0], assessment.label()
+
+
+def _availability_cap(
+    job: Job,
+    profile: Profile,
+    windows: list[AvailabilityWindow],
+    remote_ok: bool,
+) -> str | None:
+    """On-site work that starts while the candidate can only work remotely (the academic
+    year) is a hard no. ``windows`` are the availability windows the posting's dates fit."""
+    if remote_ok or job.workplace_type == "remote" or not windows:
+        return None
+    if all(w.remote_only for w in windows):
+        until = max(w.end for w in windows).isoformat()
+        return f"on-site but starts in '{windows[0].label}' (remote only until {until})"
+    return None
+
+
+def _language_cap(job: Job, profile: Profile) -> str | None:
+    missing = missing_languages(job.title, job.description, profile)
+    if missing:
+        return f"requires {', '.join(missing)} (not in profile at B2+)"
+    return None
 
 
 # --------------------------------------------------------------------------- score
@@ -288,7 +361,7 @@ def score_job(job: Job, profile: Profile, today: dt.date | None = None) -> Score
     components: dict[str, float] = {}
     notes: dict[str, str] = {}
 
-    components["contract"], notes["contract"] = _contract(job, profile)
+    components["contract"], notes["contract"], contract_cap = _contract(job, profile)
     components["role"], notes["role"] = _role(job, profile)
     components["sector"], notes["sector"] = _sector(job, profile)
     location = assess_location(job, profile)
@@ -302,7 +375,17 @@ def score_job(job: Job, profile: Profile, today: dt.date | None = None) -> Score
 
     total_weight = sum(weights.values()) or 1.0
     raw = sum(weights[k] * components[k] for k in components) / total_weight * 100
-    score = round(raw * LOCATION_TIERS[location.tier][1])
+    score = round(raw * _location_scores(location)[1])
+
+    caps = [
+        reason
+        for reason in (
+            contract_cap,
+            _availability_cap(job, profile, windows, remote_ok),
+            _language_cap(job, profile),
+        )
+        if reason
+    ]
 
     keyword = next(
         (kw for kw in profile.preferences.exclude_title_keywords if contains_term(job.title, kw)),
@@ -313,8 +396,15 @@ def score_job(job: Job, profile: Profile, today: dt.date | None = None) -> Score
         score = min(score, EXCLUDED_CAP)
     elif location.needs_visa:
         score = min(score, VISA_CAP)
+    if caps:
+        score = min(score, HARD_CAP)
     return ScoreResult(
-        score=score, components=components, notes=notes, excluded=excluded, location=location
+        score=score,
+        components=components,
+        notes=notes,
+        excluded=excluded,
+        location=location,
+        caps=caps,
     )
 
 

@@ -139,6 +139,11 @@ ABBREVIATIONS: dict[str, str] = {
     "CO": "US", "GA": "US", "PA": "US", "FL": "US", "DC": "US", "CT": "US", "VA": "US",
     "NC": "US", "MN": "US", "OH": "US", "MI": "US", "UT": "US", "AZ": "US", "OR": "US",
     "MD": "US", "UAE": "AE",
+    # states whose code is not an everyday word (IN, ME, OR, ID, LA, AR, DE are left out)
+    "HI": "US", "KS": "US", "KY": "US", "NM": "US", "NV": "US", "OK": "US", "TN": "US",
+    "WI": "US", "WV": "US", "SC": "US", "SD": "US", "ND": "US", "MT": "US", "MO": "US",
+    "IA": "US", "AL": "US", "AK": "US", "MS": "US", "NH": "US", "VT": "US", "WY": "US",
+    "RI": "US", "NE": "US",
 }  # fmt: skip
 US_STATES = {
     "california", "texas", "massachusetts", "illinois", "washington state", "new jersey",
