@@ -5,6 +5,7 @@ from __future__ import annotations
 import html
 import re
 import unicodedata
+from functools import lru_cache
 from html.parser import HTMLParser
 
 _BLOCK_TAGS = {"p", "div", "br", "h1", "h2", "h3", "h4", "h5", "h6", "ul", "ol", "tr", "section"}
@@ -50,8 +51,11 @@ def html_to_text(raw: str | None, *, escaped: bool = False) -> str:
     return re.sub(r"\n{3,}", "\n\n", text).strip()
 
 
+@lru_cache(maxsize=512)  # one description is folded once, not once per keyword
 def fold(text: str) -> str:
     """Lowercase and strip accents so 'Prácticas' matches 'practicas'."""
+    if text.isascii():
+        return text.lower()
     norm = unicodedata.normalize("NFKD", text or "")
     return "".join(c for c in norm if not unicodedata.combining(c)).lower()
 
@@ -123,3 +127,4 @@ def guess_language(text: str) -> str:
 
 def word_count(text: str) -> int:
     return len(re.findall(r"\b[\w'’-]+\b", text))
+
