@@ -7,6 +7,7 @@
     jobhunt prepare <id> [<id>...]   generate CV + cover letter + LinkedIn note to review
     jobhunt status [<id> [<state>]]  pipeline overview / job detail / update state
     jobhunt followups                applications due for a follow-up
+    jobhunt bot                      Telegram bot: commands, buttons, daily search
     jobhunt export                   export the tracker to CSV
 
 The copilot never submits applications and never automates LinkedIn.
@@ -25,10 +26,11 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
+from jobhunt.bot import Bot, BotConfig, parse_daily_time
 from jobhunt.generator import IncompleteProfileError, PreparedApplication
 from jobhunt.generator.llm import Polisher, get_polisher
 from jobhunt.models import Job
-from jobhunt.notify import TelegramNotifier, notify_offers
+from jobhunt.notify import NotifyError, TelegramApi, TelegramNotifier, UrllibPoster, notify_offers
 from jobhunt.pipeline import (
     LocationFilter,
     apply_filter,
@@ -558,6 +560,77 @@ def _notify_telegram(shortlist: list[JobRecord], prepared: dict[int, PreparedApp
     console.print(f"Telegram: notified {sent}/{len(shortlist)} offer(s).")
     for error in errors:
         console.print(f"  [yellow]![/yellow] {error}")
+
+
+# --------------------------------------------------------------------------- bot
+
+
+@app.command(name="bot")
+def bot_cmd(
+    ctx: typer.Context,
+    daily_at: Annotated[
+        str,
+        typer.Option(
+            envvar="JOBHUNT_BOT_DAILY_AT", help="Local time (HH:MM) of the automatic daily search."
+        ),
+    ] = "09:00",
+    no_daily: Annotated[
+        bool, typer.Option("--no-daily", help="Do not run the automatic daily search.")
+    ] = False,
+    max_offers: Annotated[int, typer.Option(help="Offers sent per command.")] = 10,
+    fixtures: Annotated[Path | None, typer.Option(help="Offline mode (tests/demos).")] = None,
+) -> None:
+    """Run the Telegram bot (long polling): /hoy /madrid /espana /pendientes /stats /buscar.
+    It answers only TELEGRAM_CHAT_ID, searches once a day by itself and never sends anything
+    to employers. Stop it with Ctrl+C."""
+    settings = _settings(ctx)
+    token = (os.environ.get("TELEGRAM_BOT_TOKEN") or "").strip()
+    chat_id = (os.environ.get("TELEGRAM_CHAT_ID") or "").strip()
+    if not token or not chat_id:
+        err.print(
+            "[red]Set TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID first[/red] (see README: "
+            "Telegram bot)."
+        )
+        raise typer.Exit(1)
+    try:
+        at = None if no_daily else parse_daily_time(daily_at)
+    except ValueError as exc:
+        err.print(f"[red]{exc}[/red]")
+        raise typer.Exit(1) from exc
+    _profile(ctx)  # fail early if profile.yaml is broken
+    config = BotConfig(
+        chat_id=chat_id,
+        profile=settings.profile,
+        db=settings.db,
+        companies=settings.companies,
+        out=settings.out,
+        daily_at=at,
+        max_offers=max_offers,
+    )
+    api = TelegramApi(token, UrllibPoster(timeout=config.poll_timeout + 15))
+    try:
+        me = api.get_me()
+    except NotifyError as exc:
+        err.print(f"[red]{exc}[/red] Check TELEGRAM_BOT_TOKEN.")
+        raise typer.Exit(1) from exc
+    bot = Bot(
+        api,
+        config,
+        today=_today,
+        fetcher=(lambda: FixtureFetcher(fixtures)) if fixtures else HttpFetcher,
+        log=lambda line: console.print(
+            f"[{dt.datetime.now():%Y-%m-%d %H:%M:%S}] {line}", markup=False
+        ),
+    )
+    console.print(
+        f"Bot @{me.get('username', '?')} running for chat {chat_id}. "
+        f"Daily search: {at.strftime('%H:%M') if at else 'off'}. Ctrl+C to stop."
+    )
+    bot.announce()
+    try:
+        bot.run_forever()
+    except KeyboardInterrupt:
+        console.print("Bot stopped.")
 
 
 # ------------------------------------------------------------------------- status
