@@ -226,3 +226,7 @@ data/
 *.db
 *.sqlite3
 applications.csv
+
+# daily automation
+logs/
+shortlist*.md
