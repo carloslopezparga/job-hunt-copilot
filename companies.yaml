@@ -60,3 +60,79 @@ companies:
   - {name: Thoughtworks,     ats: greenhouse, slug: thoughtworks, sector: consulting}
   - {name: Faculty,          ats: ashby,      slug: faculty,      sector: consulting,
      notes: "AI consultancy (London)"}
+
+  # --- verified with `jobhunt check-boards` on 2026-10-08 ---
+  - {name: "Mistral AI", ats: ashby, slug: mistral.ai, sector: ai_tech}  # 209 jobs · 9 in Spain · 140 EU/no-visa · 3 internships
+  - {name: "Shift Technology", ats: greenhouse, slug: shifttechnology, sector: ai_tech}  # 31 jobs · 1 in Spain · 15 EU/no-visa · 9 internships
+  - {name: Legora, ats: ashby, slug: legora, sector: ai_tech}  # 283 jobs · 3 in Spain · 78 EU/no-visa · 0 internships
+  - {name: Harvey, ats: ashby, slug: harvey, sector: ai_tech}  # 338 jobs · 2 in Spain · 39 EU/no-visa · 3 internships
+  - {name: "Causa Prima", ats: ashby, slug: causaprima, sector: ai_tech}  # 6 jobs · 6 in Spain · 6 EU/no-visa · 0 internships
+  - {name: "Air Apps", ats: ashby, slug: airapps, sector: ai_tech}  # 498 jobs · 72 in Spain · 403 EU/no-visa · 0 internships
+  - {name: Fonio, ats: ashby, slug: Fonio, sector: ai_tech}  # 73 jobs · 27 in Spain · 61 EU/no-visa · 0 internships
+  - {name: Codeway, ats: ashby, slug: codeway, sector: ai_tech}  # 13 jobs · 9 in Spain · 9 EU/no-visa · 0 internships
+  - {name: LABHOUSE, ats: ashby, slug: labhouse, sector: ai_tech}  # 22 jobs · 21 in Spain · 21 EU/no-visa · 0 internships
+  - {name: Amenitiz, ats: ashby, slug: amenitiz, sector: ai_tech}  # 24 jobs · 17 in Spain · 24 EU/no-visa · 0 internships
+  - {name: "Tiger Data", ats: ashby, slug: tigerdata, sector: ai_tech}  # 15 jobs · 4 in Spain · 4 EU/no-visa · 0 internships
+  - {name: Reedsy, ats: ashby, slug: reedsy, sector: ai_tech}  # 17 jobs · 13 in Spain · 15 EU/no-visa · 5 internships
+  - {name: "Axelera AI", ats: ashby, slug: axelera, sector: ai_tech}  # 8 jobs · 2 in Spain · 4 EU/no-visa · 2 internships
+  - {name: "Featherless AI", ats: ashby, slug: featherlessai, sector: ai_tech}  # 17 jobs · 1 in Spain · 2 EU/no-visa · 0 internships
+  - {name: Uplane, ats: ashby, slug: uplane, sector: ai_tech}  # 16 jobs · 0 in Spain · 14 EU/no-visa · 3 internships
+  - {name: TomTom, ats: lever, slug: tomtom, sector: ai_tech, region: eu}  # 21 jobs · 4 in Spain · 11 EU/no-visa · 0 internships
+  - {name: Jobandtalent, ats: lever, slug: jobandtalent, sector: ai_tech}  # 29 jobs · 13 in Spain · 14 EU/no-visa · 0 internships
+  - {name: Aleph, ats: lever, slug: aleph, sector: ai_tech}  # 113 jobs · 14 in Spain · 65 EU/no-visa · 2 internships
+  - {name: Aircall, ats: greenhouse, slug: aircallioinc, sector: ai_tech}  # 75 jobs · 13 in Spain · 40 EU/no-visa · 10 internships
+  - {name: Socialpoint, ats: greenhouse, slug: spcareers, sector: ai_tech}  # 11 jobs · 11 in Spain · 11 EU/no-visa · 4 internships
+  - {name: TheFork, ats: greenhouse, slug: thefork, sector: ai_tech}  # 30 jobs · 13 in Spain · 24 EU/no-visa · 1 internships
+  - {name: OneTrust, ats: greenhouse, slug: onetrust, sector: ai_tech}  # 95 jobs · 15 in Spain · 19 EU/no-visa · 2 internships
+  - {name: Geotab, ats: greenhouse, slug: geotab, sector: ai_tech}  # 66 jobs · 5 in Spain · 15 EU/no-visa · 2 internships
+  - {name: Airbnb, ats: greenhouse, slug: airbnb, sector: ai_tech}  # 162 jobs · 1 in Spain · 13 EU/no-visa · 0 internships
+  - {name: Ebury, ats: greenhouse, slug: ebury, sector: fintech}  # 152 jobs · 48 in Spain · 98 EU/no-visa · 2 internships
+  - {name: Taxbit, ats: greenhouse, slug: taxbit, sector: fintech}  # 17 jobs · 3 in Spain · 4 EU/no-visa · 0 internships
+  - {name: SumUp, ats: greenhouse, slug: sumup, sector: fintech}  # 347 jobs · 24 in Spain · 230 EU/no-visa · 4 internships
+  - {name: PropHero, ats: greenhouse, slug: prophero, sector: fintech}  # 12 jobs · 12 in Spain · 12 EU/no-visa · 4 internships
+  - {name: Prima, ats: lever, slug: prima, sector: fintech, region: eu}  # 93 jobs · 30 in Spain · 65 EU/no-visa · 1 internships
+  - {name: Finom, ats: lever, slug: pnlfin, sector: fintech, region: eu}  # 84 jobs · 36 in Spain · 79 EU/no-visa · 0 internships
+  - {name: dLocal, ats: lever, slug: dlocal, sector: fintech}  # 53 jobs · 20 in Spain · 20 EU/no-visa · 0 internships
+  - {name: MoonPay, ats: lever, slug: moonpay, sector: fintech}  # 28 jobs · 2 in Spain · 4 EU/no-visa · 0 internships
+  - {name: Alan, ats: ashby, slug: alan, sector: fintech}  # 117 jobs · 20 in Spain · 98 EU/no-visa · 5 internships
+  - {name: Satispay, ats: ashby, slug: satispay, sector: fintech}  # 102 jobs · 10 in Spain · 97 EU/no-visa · 0 internships
+  - {name: Joko, ats: ashby, slug: joko, sector: fintech}  # 48 jobs · 31 in Spain · 48 EU/no-visa · 6 internships
+  - {name: "Flow Traders", ats: greenhouse, slug: flowtraders, sector: quant_trading}  # 48 jobs · 0 in Spain · 25 EU/no-visa · 2 internships
+  - {name: "Radix Trading", ats: greenhouse, slug: radixuniversity, sector: quant_trading}  # 8 jobs · 0 in Spain · 5 EU/no-visa · 1 internships
+  - {name: "Five Rings", ats: greenhouse, slug: fiveringsllc, sector: quant_trading}  # 17 jobs · 0 in Spain · 2 EU/no-visa · 5 internships
+  - {name: "Virtu Financial", ats: greenhouse, slug: virtu, sector: quant_trading}  # 46 jobs · 0 in Spain · 11 EU/no-visa · 15 internships
+  - {name: "Maven Securities", ats: greenhouse, slug: mavensecuritiesholdingltd, sector: quant_trading}  # 42 jobs · 0 in Spain · 8 EU/no-visa · 5 internships
+  - {name: "Brunswick Group", ats: greenhouse, slug: brunswickgroup, sector: consulting}  # 38 jobs · 1 in Spain · 9 EU/no-visa · 3 internships
+  - {name: "The Brattle Group", ats: greenhouse, slug: thebrattlegroup, sector: consulting}  # 53 jobs · 1 in Spain · 2 EU/no-visa · 8 internships
+  - {name: Teneo, ats: greenhouse, slug: teneo, sector: consulting}  # 50 jobs · 0 in Spain · 4 EU/no-visa · 0 internships
+  - {name: AlixPartners, ats: greenhouse, slug: alixpartners, sector: consulting}  # 115 jobs · 0 in Spain · 43 EU/no-visa · 14 internships
+  - {name: Fever, ats: greenhouse, slug: feverup, sector: ai_tech}  # 565 jobs · 264 in Spain · 317 EU/no-visa · 14 internships
+  - {name: Cabify, ats: greenhouse, slug: cabify, sector: ai_tech}  # 68 jobs · 30 in Spain · 30 EU/no-visa · 7 internships
+  - {name: "Perk (TravelPerk)", ats: ashby, slug: perk, sector: fintech}  # 128 jobs · 52 in Spain · 67 EU/no-visa · 0 internships
+  - {name: Kraken, ats: ashby, slug: kraken.com, sector: fintech}  # 81 jobs · 24 in Spain · 42 EU/no-visa · 0 internships
+  - {name: Celonis, ats: greenhouse, slug: celonis, sector: ai_tech}  # 228 jobs · 34 in Spain · 111 EU/no-visa · 8 internships
+  - {name: Elastic, ats: greenhouse, slug: elastic, sector: ai_tech}  # 419 jobs · 71 in Spain · 198 EU/no-visa · 0 internships
+  - {name: Docplanner, ats: ashby, slug: docplanner, sector: ai_tech}  # 41 jobs · 20 in Spain · 29 EU/no-visa · 0 internships
+  - {name: Pleo, ats: ashby, slug: pleo, sector: fintech}  # 33 jobs · 14 in Spain · 28 EU/no-visa · 0 internships
+  - {name: Pennylane, ats: ashby, slug: pennylane, sector: fintech}  # 145 jobs · 13 in Spain · 80 EU/no-visa · 0 internships
+  - {name: Helsing, ats: greenhouse, slug: helsing, sector: ai_tech}  # 164 jobs · 14 in Spain · 132 EU/no-visa · 1 internships
+  - {name: "Squarepoint Capital", ats: greenhouse, slug: squarepointcapital, sector: quant_trading}  # 89 jobs · 10 in Spain · 39 EU/no-visa · 5 internships
+  - {name: "Back Market", ats: ashby, slug: backmarket, sector: ai_tech}  # 34 jobs · 5 in Spain · 32 EU/no-visa · 19 internships
+  - {name: Keyrock, ats: ashby, slug: keyrock, sector: quant_trading}  # 10 jobs · 7 in Spain · 8 EU/no-visa · 0 internships
+  - {name: Cloudflare, ats: greenhouse, slug: cloudflare, sector: ai_tech}  # 426 jobs · 7 in Spain · 77 EU/no-visa · 4 internships
+  - {name: Bitpanda, ats: greenhouse, slug: bitpanda, sector: fintech}  # 23 jobs · 6 in Spain · 23 EU/no-visa · 1 internships
+  - {name: Raisin, ats: greenhouse, slug: raisin, sector: fintech}  # 39 jobs · 3 in Spain · 33 EU/no-visa · 4 internships
+  - {name: Mirakl, ats: greenhouse, slug: mirakl, sector: ai_tech}  # 31 jobs · 3 in Spain · 29 EU/no-visa · 19 internships
+  - {name: Contentsquare, ats: lever, slug: contentsquare, sector: ai_tech}  # 24 jobs · 3 in Spain · 8 EU/no-visa · 1 internships
+  - {name: Typeform, ats: greenhouse, slug: typeform, sector: ai_tech}  # 13 jobs · 6 in Spain · 6 EU/no-visa · 0 internships
+  - {name: Wallapop, ats: greenhouse, slug: wallapop, sector: ai_tech}  # 5 jobs · 5 in Spain · 5 EU/no-visa · 0 internships
+  - {name: GetYourGuide, ats: greenhouse, slug: getyourguide, sector: ai_tech}  # 62 jobs · 1 in Spain · 56 EU/no-visa · 2 internships
+  - {name: Dataiku, ats: greenhouse, slug: dataiku, sector: ai_tech}  # 20 jobs · 1 in Spain · 7 EU/no-visa · 1 internships
+  - {name: Pigment, ats: lever, slug: pigment, sector: ai_tech}  # 139 jobs · 1 in Spain · 62 EU/no-visa · 3 internships
+  - {name: Feedzai, ats: greenhouse, slug: feedzai, sector: fintech}  # 27 jobs · 1 in Spain · 19 EU/no-visa · 1 internships
+  - {name: Doctolib, ats: greenhouse, slug: doctolib, sector: ai_tech}  # 151 jobs · 0 in Spain · 146 EU/no-visa · 34 internships
+  - {name: Solaris, ats: greenhouse, slug: solarisbank, sector: fintech}  # 23 jobs · 0 in Spain · 23 EU/no-visa · 4 internships
+  - {name: "Man Group", ats: greenhouse, slug: mangroup, sector: quant_trading}  # 55 jobs · 0 in Spain · 9 EU/no-visa · 6 internships
+  - {name: Point72, ats: greenhouse, slug: point72, sector: quant_trading}  # 221 jobs · 0 in Spain · 22 EU/no-visa · 13 internships
+  - {name: Snowflake, ats: ashby, slug: snowflake, sector: ai_tech}  # 357 jobs · 0 in Spain · 33 EU/no-visa · 5 internships
+  - {name: "Charles River Associates", ats: greenhouse, slug: charlesriverassociates, sector: consulting}  # 91 jobs · 0 in Spain · 10 EU/no-visa · 10 internships

@@ -1,127 +1,22 @@
 # CANDIDATE employers - NOT used by `jobhunt discover`.
 #
-# Every slug below was taken from a public job-board URL found by web search
-# (the URL is in `notes`), not from memory. None has been checked against the
-# APIs yet: the environment where this list was built had no access to them.
-# Verify and promote the good ones with:
+# Staging area for NEW employers: add entries under `companies:` (with the public
+# job-board URL in `notes`), verify them against the live APIs and promote the good ones:
 #
 #     jobhunt check-boards --file companies.candidates.yaml --promote companies.yaml
 #
 # Only boards that answer with real postings, at least one of them in a place an
 # EU citizen can work without a visa (--min-eu-jobs, default 1), are appended to
-# companies.yaml. Search snippets can be stale, so expect some to fail.
+# companies.yaml; then delete them from here. Search snippets can be stale, so expect some
+# to fail.
 #
 # Not covered here on purpose: investment banks (Citi, BofA, Barclays, Goldman,
 # Nomura, Alantra, Arcano...) recruit in Madrid through their own portals, which
 # have no public API. Track those offers with `jobhunt add`.
 
-companies:
-  # ------------------------------------------------- AI / tech with Spain/EU roles
-  - {name: Mistral AI, ats: ashby, slug: mistral.ai, sector: ai_tech,
-     notes: "replaces lever/mistral (0 jobs); https://jobs.ashbyhq.com/mistral.ai"}
-  - {name: Shift Technology, ats: greenhouse, slug: shifttechnology, sector: ai_tech,
-     notes: "Madrid data-science internship; https://job-boards.greenhouse.io/shifttechnology/jobs/7687752003"}
-  - {name: Legora, ats: ashby, slug: legora, sector: ai_tech,
-     notes: "Madrid roles; https://jobs.ashbyhq.com/legora"}
-  - {name: Harvey, ats: ashby, slug: harvey, sector: ai_tech,
-     notes: "Madrid roles; https://jobs.ashbyhq.com/harvey"}
-  - {name: Causa Prima, ats: ashby, slug: causaprima, sector: ai_tech,
-     notes: "Madrid AI startup; https://jobs.ashbyhq.com/causaprima/e547f117-a090-49ee-998a-2b9e643e8ff9"}
-  - {name: Air Apps, ats: ashby, slug: airapps, sector: ai_tech,
-     notes: "AI/ML Engineer Madrid/Lisbon; https://jobs.ashbyhq.com/airapps/c5a73aab-8f2b-4a72-9a18-e5272d9eb3cf"}
-  - {name: Relevance AI, ats: ashby, slug: relevanceai, sector: ai_tech,
-     notes: "Barcelona; https://jobs.ashbyhq.com/relevanceai/a5f1ed76-ff93-44a3-9695-8392fa4fc68f"}
-  - {name: Fonio, ats: ashby, slug: Fonio, sector: ai_tech,
-     notes: "Barcelona AI voice; https://jobs.ashbyhq.com/Fonio"}
-  - {name: Codeway, ats: ashby, slug: codeway, sector: ai_tech,
-     notes: "Barcelona/Istanbul; https://jobs.ashbyhq.com/codeway"}
-  - {name: LABHOUSE, ats: ashby, slug: labhouse, sector: ai_tech,
-     notes: "Barcelona, remote Spain; https://jobs.ashbyhq.com/labhouse/887d8fd2-ecfd-49c3-befb-4952ca9ee485"}
-  - {name: Amenitiz, ats: ashby, slug: amenitiz, sector: ai_tech,
-     notes: "Barcelona; https://jobs.ashbyhq.com/amenitiz"}
-  - {name: Tiger Data, ats: ashby, slug: tigerdata, sector: ai_tech,
-     notes: "Barcelona; https://jobs.ashbyhq.com/tigerdata/2f739405-6cb3-4487-8551-d6727a2bc308"}
-  - {name: Reedsy, ats: ashby, slug: reedsy, sector: ai_tech,
-     notes: "AI Engineer remote Europe incl. Spain; https://jobs.ashbyhq.com/reedsy/b043b550-02b7-416f-8969-5db8fd9dc8ee"}
-  - {name: Axelera AI, ats: ashby, slug: axelera, sector: ai_tech,
-     notes: "EU AI hardware; https://jobs.ashbyhq.com/axelera"}
-  - {name: Featherless AI, ats: ashby, slug: featherlessai, sector: ai_tech,
-     notes: "Paris/Berlin intern roles; https://jobs.ashbyhq.com/featherlessai/6f46563a-adfc-4cf8-8f95-b776e0465d61"}
-  - {name: Uplane, ats: ashby, slug: uplane, sector: ai_tech,
-     notes: "Berlin/remote AI intern; https://jobs.ashbyhq.com/uplane/49df14a1-3321-4e82-b85f-d0ecc51ef982"}
-  - {name: TomTom, ats: lever, slug: tomtom, sector: ai_tech, region: eu,
-     notes: "Madrid AI/applied science; https://jobs.eu.lever.co/tomtom/?location=Madrid%2C+Spain"}
-  - {name: Jobandtalent, ats: lever, slug: jobandtalent, sector: ai_tech,
-     notes: "Madrid HQ; https://jobs.lever.co/jobandtalent/"}
-  - {name: Aleph, ats: lever, slug: aleph, sector: ai_tech,
-     notes: "Madrid intern roles; https://jobs.lever.co/aleph?location=Madrid%2C+Spain"}
-  - {name: Aircall, ats: greenhouse, slug: aircallioinc, sector: ai_tech,
-     notes: "Madrid office internship; https://job-boards.greenhouse.io/aircallioinc/jobs/4317624009"}
-  - {name: Socialpoint, ats: greenhouse, slug: spcareers, sector: ai_tech,
-     notes: "Barcelona intern roles; https://job-boards.greenhouse.io/spcareers/jobs/5702989004"}
-  - {name: TheFork, ats: greenhouse, slug: thefork, sector: ai_tech,
-     notes: "Barcelona internships; https://job-boards.greenhouse.io/thefork"}
-  - {name: OneTrust, ats: greenhouse, slug: onetrust, sector: ai_tech,
-     notes: "Madrid; https://job-boards.greenhouse.io/onetrust/jobs/8141613"}
-  - {name: Geotab, ats: greenhouse, slug: geotab, sector: ai_tech,
-     notes: "Madrid; https://job-boards.greenhouse.io/geotab/jobs/5044846008/"}
-  - {name: Airbnb, ats: greenhouse, slug: airbnb, sector: ai_tech,
-     notes: "Barcelona; https://job-boards.greenhouse.io/airbnb/jobs/7982715"}
+# 2026-10-08: all 74 verified candidates (44 from the first list, 30 found by probing slugs
+# for Spanish scale-ups) were promoted to companies.yaml; the rest were discarded:
+# Relevance AI, Mangopay, Compass Lexecon (empty or 404, no alternative slug exists on
+# Greenhouse/Lever/Ashby), Binance, Graviton Research Capital and Xantium (no EU postings).
 
-  # ---------------------------------------------------------------------- fintech
-  - {name: Ebury, ats: greenhouse, slug: ebury, sector: fintech,
-     notes: "Madrid data science; https://job-boards.greenhouse.io/ebury/jobs/4945129101"}
-  - {name: Taxbit, ats: greenhouse, slug: taxbit, sector: fintech,
-     notes: "Madrid; https://job-boards.greenhouse.io/taxbit/jobs/5986594004"}
-  - {name: Mangopay, ats: greenhouse, slug: mangopay, sector: fintech,
-     notes: "Madrid; https://boards.greenhouse.io/mangopay/jobs/4345663101"}
-  - {name: SumUp, ats: greenhouse, slug: sumup, sector: fintech,
-     notes: "Barcelona; https://job-boards.greenhouse.io/sumup/jobs/8448681002"}
-  - {name: PropHero, ats: greenhouse, slug: prophero, sector: fintech,
-     notes: "Madrid intern; https://job-boards.greenhouse.io/prophero/jobs/5271760008"}
-  - {name: Prima, ats: lever, slug: prima, sector: fintech, region: eu,
-     notes: "insurtech, Madrid; https://jobs.eu.lever.co/prima?location=Madrid"}
-  - {name: Finom, ats: lever, slug: pnlfin, sector: fintech, region: eu,
-     notes: "Barcelona / EU remote; https://jobs.eu.lever.co/pnlfin?location=Barcelona"}
-  - {name: dLocal, ats: lever, slug: dlocal, sector: fintech,
-     notes: "Barcelona; https://jobs.lever.co/dlocal"}
-  - {name: MoonPay, ats: lever, slug: moonpay, sector: fintech,
-     notes: "Barcelona/Madrid; https://jobs.lever.co/moonpay"}
-  - {name: Binance, ats: lever, slug: binance, sector: fintech,
-     notes: "Remote Spain/Barcelona; https://jobs.lever.co/binance?location=Spain%2C+Barcelona"}
-  - {name: Alan, ats: ashby, slug: alan, sector: fintech,
-     notes: "insurtech, Madrid/Barcelona; https://jobs.ashbyhq.com/alan/8fd3db06-fe59-4513-aed4-361e1beec138"}
-  - {name: Satispay, ats: ashby, slug: satispay, sector: fintech,
-     notes: "Barcelona; https://jobs.ashbyhq.com/satispay/54d0d434-dbbd-4f48-bd2d-8a1df8bcaedf"}
-  - {name: Joko, ats: ashby, slug: joko, sector: fintech,
-     notes: "Paris intern roles; https://jobs.ashbyhq.com/joko"}
-
-  # -------------------------------------------------------------- quant / trading
-  - {name: Flow Traders, ats: greenhouse, slug: flowtraders, sector: quant_trading,
-     notes: "Amsterdam; https://job-boards.greenhouse.io/flowtraders/jobs/8047166"}
-  - {name: Graviton Research Capital, ats: greenhouse, slug: gravitonresearchcapital,
-     sector: quant_trading,
-     notes: "Amsterdam intern; https://job-boards.greenhouse.io/gravitonresearchcapital/jobs/8522512002"}
-  - {name: Radix Trading, ats: greenhouse, slug: radixuniversity, sector: quant_trading,
-     notes: "Amsterdam; https://job-boards.greenhouse.io/radixuniversity"}
-  - {name: Five Rings, ats: greenhouse, slug: fiveringsllc, sector: quant_trading,
-     notes: "Amsterdam office; https://job-boards.greenhouse.io/fiveringsllc/jobs/5122638008"}
-  - {name: Virtu Financial, ats: greenhouse, slug: virtu, sector: quant_trading,
-     notes: "https://job-boards.greenhouse.io/virtu/jobs/8624424002"}
-  - {name: Maven Securities, ats: greenhouse, slug: mavensecuritiesholdingltd,
-     sector: quant_trading,
-     notes: "6-month quant trader internship; https://job-boards.greenhouse.io/mavensecuritiesholdingltd/jobs/8043552"}
-  - {name: Xantium, ats: greenhouse, slug: xantium, sector: quant_trading,
-     notes: "https://job-boards.greenhouse.io/xantium/jobs/4360768009"}
-
-  # ------------------------------------------------------------------- consulting
-  - {name: Brunswick Group, ats: greenhouse, slug: brunswickgroup, sector: consulting,
-     notes: "Madrid; https://job-boards.greenhouse.io/brunswickgroup/jobs/8535529002"}
-  - {name: The Brattle Group, ats: greenhouse, slug: thebrattlegroup, sector: consulting,
-     notes: "Madrid office; https://job-boards.greenhouse.io/thebrattlegroup/jobs/4733562005"}
-  - {name: Teneo, ats: greenhouse, slug: teneo, sector: consulting,
-     notes: "https://job-boards.greenhouse.io/teneo"}
-  - {name: AlixPartners, ats: greenhouse, slug: alixpartners, sector: consulting,
-     notes: "https://job-boards.greenhouse.io/alixpartners/jobs/7725335003"}
-  - {name: Compass Lexecon, ats: lever, slug: compasslexecon, sector: consulting,
-     notes: "Madrid analyst; https://jobs.lever.co/compasslexecon/87925e82-7577-4d90-93ab-e6e78cf8718c/apply"}
+companies: []

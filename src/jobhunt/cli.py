@@ -7,6 +7,7 @@
     jobhunt prepare <id> [<id>...]   generate CV + cover letter + LinkedIn note to review
     jobhunt status [<id> [<state>]]  pipeline overview / job detail / update state
     jobhunt followups                applications due for a follow-up
+    jobhunt bot                      Telegram bot: commands, buttons, daily search
     jobhunt export                   export the tracker to CSV
 
 The copilot never submits applications and never automates LinkedIn.
@@ -25,15 +26,22 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-from jobhunt.generator import IncompleteProfileError, PreparedApplication, prepare_application
+from jobhunt.bot import Bot, BotConfig, parse_daily_time
+from jobhunt.generator import IncompleteProfileError, PreparedApplication
 from jobhunt.generator.llm import Polisher, get_polisher
 from jobhunt.models import Job
-from jobhunt.notify import TelegramNotifier, notify_offers
-from jobhunt.pipeline import LocationFilter, apply_filter, score_tracked
+from jobhunt.notify import NotifyError, TelegramApi, TelegramNotifier, UrllibPoster, notify_offers
+from jobhunt.pipeline import (
+    LocationFilter,
+    apply_filter,
+    discover_tracked,
+    prepare_record,
+    score_tracked,
+)
 from jobhunt.profile import SECTORS, Profile, ProfileError, load_profile
-from jobhunt.scoring import assess_location, deduplicate
+from jobhunt.scoring import assess_location
 from jobhunt.shortlist import render_markdown, write_markdown
-from jobhunt.sources import FixtureFetcher, HttpFetcher, discover, load_companies
+from jobhunt.sources import FixtureFetcher, HttpFetcher, load_companies
 from jobhunt.sources.check import check_board, qualifies
 from jobhunt.sources.check import promote as promote_companies
 from jobhunt.tracker import STATUSES, JobRecord, Tracker, TrackerError, normalize_status
@@ -164,19 +172,17 @@ def _discover_into(
 
     fetcher = FixtureFetcher(fixtures) if fixtures else HttpFetcher()
     console.print(f"Fetching {len(companies)} boards{' (offline)' if fixtures else ''}…")
-    result = discover(companies, fetcher)
-    jobs = deduplicate(result.jobs)
-    stats = tracker.upsert_jobs(jobs)
+    summary = discover_tracked(tracker, companies, fetcher)
 
     if verbose:
-        for name, count in sorted(result.counts.items()):
+        for name, count in sorted(summary.boards_ok.items()):
             console.print(f"  [green]✓[/green] {name}: {count} postings")
-    for name, error in sorted(result.errors.items()):
+    for name, error in sorted(summary.errors.items()):
         console.print(f"  [yellow]![/yellow] {name}: {error}")
     console.print(
-        f"[bold]{stats.inserted} new[/bold], {stats.updated} refreshed, "
-        f"{stats.duplicates + len(result.jobs) - len(jobs)} duplicates skipped "
-        f"({len(result.counts)} boards OK, {len(result.errors)} failed)."
+        f"[bold]{summary.inserted} new[/bold], {summary.updated} refreshed, "
+        f"{summary.duplicates} duplicates skipped "
+        f"({len(summary.boards_ok)} boards OK, {len(summary.errors)} failed)."
     )
 
 
@@ -319,7 +325,7 @@ def score(
             if r.score is not None and r.score >= min_score
         ]
     records = apply_filter(records, profile, flt)
-    if run.reason == "profile changed":
+    if run.reason in ("profile changed", "migrated database"):
         console.print("profile.yaml (or the scoring rules) changed: re-scored every job.")
     console.print(f"Scored {run.scored} job(s). Showing {min(limit, len(records))} of "
                   f"{len(records)} matching job(s).")  # fmt: skip
@@ -429,21 +435,16 @@ def _prepare_one(
     polisher: Polisher,
     allow_placeholders: bool = False,
 ) -> PreparedApplication:
-    result = prepare_application(
-        record.job,
+    result = prepare_record(
+        tracker,
         profile,
+        record,
         _settings(ctx).out,
+        _today(),
         lang=lang,
         polisher=polisher,
-        record_id=record.id,
-        score=record.score,
-        explanation=record.score_explanation,
-        today=_today(),
         allow_placeholders=allow_placeholders,
     )
-    tracker.set_prepared_dir(record.id, str(result.directory))
-    if record.status == "new":
-        tracker.set_status(record.id, "prepared", note=f"material in {result.directory}")
     console.print(
         f"[green]✓[/green] #{record.id} {record.job.title} — {record.job.company} "
         f"\\[{result.lang}] → {result.directory}  "
@@ -495,7 +496,7 @@ def run_cmd(
         _discover_into(ctx, tracker, None, fixtures, verbose=False)
         cutoff = tracker.timestamp()
         scoring = score_tracked(tracker, profile, _today())
-        if scoring.reason == "profile changed":
+        if scoring.reason in ("profile changed", "migrated database"):
             console.print("profile.yaml (or the scoring rules) changed: re-scored every job.")
         fresh = [r for r in tracker.first_seen_after(previous)
                  if r.score is not None and r.score >= threshold]  # fmt: skip
@@ -561,6 +562,77 @@ def _notify_telegram(shortlist: list[JobRecord], prepared: dict[int, PreparedApp
         console.print(f"  [yellow]![/yellow] {error}")
 
 
+# --------------------------------------------------------------------------- bot
+
+
+@app.command(name="bot")
+def bot_cmd(
+    ctx: typer.Context,
+    daily_at: Annotated[
+        str,
+        typer.Option(
+            envvar="JOBHUNT_BOT_DAILY_AT", help="Local time (HH:MM) of the automatic daily search."
+        ),
+    ] = "09:00",
+    no_daily: Annotated[
+        bool, typer.Option("--no-daily", help="Do not run the automatic daily search.")
+    ] = False,
+    max_offers: Annotated[int, typer.Option(help="Offers sent per command.")] = 10,
+    fixtures: Annotated[Path | None, typer.Option(help="Offline mode (tests/demos).")] = None,
+) -> None:
+    """Run the Telegram bot (long polling): /hoy /madrid /espana /pendientes /stats /buscar.
+    It answers only TELEGRAM_CHAT_ID, searches once a day by itself and never sends anything
+    to employers. Stop it with Ctrl+C."""
+    settings = _settings(ctx)
+    token = (os.environ.get("TELEGRAM_BOT_TOKEN") or "").strip()
+    chat_id = (os.environ.get("TELEGRAM_CHAT_ID") or "").strip()
+    if not token or not chat_id:
+        err.print(
+            "[red]Set TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID first[/red] (see README: "
+            "Telegram bot)."
+        )
+        raise typer.Exit(1)
+    try:
+        at = None if no_daily else parse_daily_time(daily_at)
+    except ValueError as exc:
+        err.print(f"[red]{exc}[/red]")
+        raise typer.Exit(1) from exc
+    _profile(ctx)  # fail early if profile.yaml is broken
+    config = BotConfig(
+        chat_id=chat_id,
+        profile=settings.profile,
+        db=settings.db,
+        companies=settings.companies,
+        out=settings.out,
+        daily_at=at,
+        max_offers=max_offers,
+    )
+    api = TelegramApi(token, UrllibPoster(timeout=config.poll_timeout + 15))
+    try:
+        me = api.get_me()
+    except NotifyError as exc:
+        err.print(f"[red]{exc}[/red] Check TELEGRAM_BOT_TOKEN.")
+        raise typer.Exit(1) from exc
+    bot = Bot(
+        api,
+        config,
+        today=_today,
+        fetcher=(lambda: FixtureFetcher(fixtures)) if fixtures else HttpFetcher,
+        log=lambda line: console.print(
+            f"[{dt.datetime.now():%Y-%m-%d %H:%M:%S}] {line}", markup=False
+        ),
+    )
+    console.print(
+        f"Bot @{me.get('username', '?')} running for chat {chat_id}. "
+        f"Daily search: {at.strftime('%H:%M') if at else 'off'}. Ctrl+C to stop."
+    )
+    bot.announce()
+    try:
+        bot.run_forever()
+    except KeyboardInterrupt:
+        console.print("Bot stopped.")
+
+
 # ------------------------------------------------------------------------- status
 
 
@@ -589,7 +661,7 @@ def status(
                 statuses = (
                     [normalize_status(filter_status)]
                     if filter_status
-                    else [s for s in STATUSES if s != "rejected"]
+                    else [s for s in STATUSES if s not in ("rejected", "discarded")]
                 )
                 _print_jobs(tracker.jobs(status=statuses), explain=False)
                 return

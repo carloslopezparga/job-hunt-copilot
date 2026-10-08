@@ -1,6 +1,7 @@
 """SQLite application tracker: pipeline states, history, follow-up reminders, CSV export.
 
-States: new -> prepared -> applied -> follow_up -> interview / rejected.
+States: new -> prepared -> applied -> follow_up -> interview / rejected; any offer you
+are not interested in is marked discarded.
 Marking a job as ``applied`` (or logging a ``follow_up``) schedules the next
 follow-up reminder ``FOLLOWUP_DAYS`` later. The tracker only records what the
 user did; it never contacts anyone.
@@ -20,7 +21,7 @@ from jobhunt.models import Job
 from jobhunt.scoring import dedup_key
 
 FOLLOWUP_DAYS = 7
-STATUSES = ("new", "prepared", "applied", "follow_up", "interview", "rejected")
+STATUSES = ("new", "prepared", "applied", "follow_up", "interview", "rejected", "discarded")
 STATUS_ALIASES = {
     "nuevo": "new",
     "preparado": "prepared",
@@ -30,6 +31,8 @@ STATUS_ALIASES = {
     "seguimiento": "follow_up",
     "entrevista": "interview",
     "rechazado": "rejected",
+    "descartado": "discarded",
+    "descartada": "discarded",
 }
 OPEN_FOLLOWUP_STATUSES = ("applied", "follow_up")
 SCHEMA_VERSION = 2
@@ -198,7 +201,8 @@ class Tracker:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.clock = clock or dt.date.today
         self.now = now or _utc_now
-        self.conn = sqlite3.connect(self.path)
+        # generous timeout: the bot searches in a background thread while answering buttons
+        self.conn = sqlite3.connect(self.path, timeout=30)
         self.conn.row_factory = sqlite3.Row
         self.conn.execute("PRAGMA foreign_keys = ON")
         self._migrate()
@@ -365,6 +369,12 @@ class Tracker:
         rows = self.conn.execute(f"{sql} ORDER BY score IS NULL, score DESC, id", params)
         return [JobRecord.from_row(r) for r in rows.fetchall()]
 
+    def has_scores(self) -> bool:
+        return (
+            self.conn.execute("SELECT 1 FROM jobs WHERE score IS NOT NULL LIMIT 1").fetchone()
+            is not None
+        )
+
     def set_score(self, job_id: int, score: int, explanation: str) -> None:
         with self.conn:
             self.conn.execute(
@@ -399,7 +409,7 @@ class Tracker:
             updates["next_followup_at"] = follow
         elif status == "follow_up":
             updates["next_followup_at"] = follow
-        elif status in ("interview", "rejected", "new", "prepared"):
+        elif status in ("interview", "rejected", "discarded", "new", "prepared"):
             updates["next_followup_at"] = None
         assignments = ", ".join(f"{k}=?" for k in updates)
         with self.conn:

@@ -5,6 +5,7 @@ from __future__ import annotations
 import html
 import re
 import unicodedata
+from functools import lru_cache
 from html.parser import HTMLParser
 
 _BLOCK_TAGS = {"p", "div", "br", "h1", "h2", "h3", "h4", "h5", "h6", "ul", "ol", "tr", "section"}
@@ -50,10 +51,15 @@ def html_to_text(raw: str | None, *, escaped: bool = False) -> str:
     return re.sub(r"\n{3,}", "\n\n", text).strip()
 
 
+_COMBINING = re.compile(r"[\u0300-\u036f]")
+
+
+@lru_cache(maxsize=512)  # one description is folded once, not once per keyword
 def fold(text: str) -> str:
     """Lowercase and strip accents so 'Prácticas' matches 'practicas'."""
-    norm = unicodedata.normalize("NFKD", text or "")
-    return "".join(c for c in norm if not unicodedata.combining(c)).lower()
+    if text.isascii():
+        return text.lower()
+    return _COMBINING.sub("", unicodedata.normalize("NFKD", text or "")).lower()
 
 
 def contains_term(text: str, term: str) -> bool:
@@ -123,3 +129,52 @@ def guess_language(text: str) -> str:
 
 def word_count(text: str) -> int:
     return len(re.findall(r"\b[\w'’-]+\b", text))
+
+
+# ------------------------------------------------------------------ role matching
+
+_STEM_SUFFIXES = ("ings", "ing", "ers", "er", "ants", "ant", "ancy", "es", "s", "e")
+# Spellings a plain stemmer cannot unify, mapped onto the form used in profiles.
+_ROLE_VARIANTS = {
+    "data science": ["data scientist"],
+    "data scientist": ["data science"],
+    "machine learning": ["ml engineer", "ml"],
+    "quant": ["quantitative"],
+    "quantitative": ["quant"],
+    "software engineer": ["software developer", "software development"],
+    "artificial intelligence": ["ai"],
+}
+
+
+@lru_cache(maxsize=4096)
+def _stem(word: str) -> str:
+    """Crude suffix stripper so 'engineering', 'engineers' and 'engineer' share a root."""
+    while True:  # repeat so 'engineering' and 'engineer' both end at 'engin'
+        for suffix in _STEM_SUFFIXES:
+            if len(word) - len(suffix) >= 4 and word.endswith(suffix):
+                word = word[: -len(suffix)]
+                break
+        else:
+            return word
+
+
+@lru_cache(maxsize=256)
+def _stems(text: str) -> tuple[str, ...]:
+    return tuple(_stem(w) for w in re.findall(r"[a-z0-9+#]+", fold(text)))
+
+
+def _contains_run(haystack: tuple[str, ...], needle: tuple[str, ...]) -> bool:
+    n = len(needle)
+    return n > 0 and any(haystack[i : i + n] == needle for i in range(len(haystack) - n + 1))
+
+
+def find_roles(text: str, roles: list[str]) -> list[str]:
+    """Roles from the profile present in ``text`` by word root or known variant, so
+    'Software Engineering Intern' matches 'software engineer'. Returns the profile spelling."""
+    words = _stems(text)
+    found = []
+    for role in roles:
+        variants = [role, *_ROLE_VARIANTS.get(fold(role).strip(), [])]
+        if any(_contains_run(words, _stems(v)) for v in variants):
+            found.append(role)
+    return found

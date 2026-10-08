@@ -10,7 +10,16 @@ Tiers, best first:
     visa        every listed place needs a work permit the candidate does not hold
     unknown     the posting gives no location at all
 
-A job that lists several places is ranked by the best place it offers.
+A job that lists several places is ranked by the best place it offers, except that a
+posting with more than ``MANY_PLACES`` places is not "Madrid" just because Madrid is one of
+them: its preferred hit is demoted to the next tier.
+
+On top of the tiers, every job gets a *level* that orders the candidate's priorities:
+    home      the preferred city (Madrid)
+    country   the rest of the home country (Spain), on site
+    remote    remote from the home country or anywhere the candidate can work
+    abroad    on site elsewhere in the EU/EEA/CH (no visa)
+    other     anywhere else the candidate may work
 """
 
 from __future__ import annotations
@@ -130,6 +139,11 @@ ABBREVIATIONS: dict[str, str] = {
     "CO": "US", "GA": "US", "PA": "US", "FL": "US", "DC": "US", "CT": "US", "VA": "US",
     "NC": "US", "MN": "US", "OH": "US", "MI": "US", "UT": "US", "AZ": "US", "OR": "US",
     "MD": "US", "UAE": "AE",
+    # states whose code is not an everyday word (IN, ME, OR, ID, LA, AR, DE are left out)
+    "HI": "US", "KS": "US", "KY": "US", "NM": "US", "NV": "US", "OK": "US", "TN": "US",
+    "WI": "US", "WV": "US", "SC": "US", "SD": "US", "ND": "US", "MT": "US", "MO": "US",
+    "IA": "US", "AL": "US", "AK": "US", "MS": "US", "NH": "US", "VT": "US", "WY": "US",
+    "RI": "US", "NE": "US",
 }  # fmt: skip
 US_STATES = {
     "california", "texas", "massachusetts", "illinois", "washington state", "new jersey",
@@ -313,6 +327,8 @@ def matches(place: Place, pattern: str) -> bool:
 
 
 TIER_ORDER = ("preferred", "acceptable", "other", "unknown", "avoided", "visa")
+LEVELS = ("home", "country", "remote", "abroad", "other")
+MANY_PLACES = 5  # a posting listing more places than this is not specific to any of them
 
 
 @dataclass
@@ -322,6 +338,8 @@ class LocationAssessment:
     places: list[Place]
     remote: bool  # the best place can be worked remotely
     visa_places: list[Place]
+    level: str | None = None  # one of LEVELS (None for visa/avoided/unknown)
+    many: bool = False  # lists more than MANY_PLACES places
 
     @property
     def needs_visa(self) -> bool:
@@ -334,11 +352,42 @@ class LocationAssessment:
             codes = sorted({c for p in self.visa_places for c in p.countries()} - {"*"})
             return f"{raw} (visa needed: {'/'.join(codes) or '?'}) ✗"
         extra = f", +{len(self.places) - 1} more" if len(self.places) > 1 else ""
+        if self.many:
+            extra += f" - {len(self.places)} places, not specific to any"
         return f"{where} ({self.tier}{extra})"
 
 
-def assess(job: Job, preferred: list[str], acceptable: list[str], avoid: list[str],
-           work_authorization: list[str]) -> LocationAssessment:  # fmt: skip
+def home_countries(preferred: list[str]) -> set[str]:
+    """Countries of the preferred places (Madrid -> {'ES'})."""
+    return {c for pattern in preferred for place in _analyze(pattern) for c in place.countries()}
+
+
+def place_level(
+    place: Place, preferred: list[str], home: set[str], authorized: set[str], many: bool = False
+) -> str:
+    """Priority level of one workable place (see module docstring). With ``many`` places
+    listed, a preferred-city hit is not specific enough to count as home."""
+    if not many and any(matches(place, p) for p in preferred):
+        return "home"
+    countries = place.countries()
+    if place.remote:
+        reachable = not countries or "*" in countries or bool(countries & (home | authorized))
+        return "remote" if reachable else "other"
+    if place.country in home:
+        return "country"
+    if place.country in FREE_MOVEMENT & authorized:
+        return "abroad"
+    return "other"
+
+
+def assess(
+    job: Job,
+    preferred: list[str],
+    acceptable: list[str],
+    avoid: list[str],
+    work_authorization: list[str],
+    many_places: int = MANY_PLACES,
+) -> LocationAssessment:
     places = job_places(job)
     if not places:
         return LocationAssessment("unknown", None, [], job.workplace_type == "remote", [])
@@ -347,14 +396,25 @@ def assess(job: Job, preferred: list[str], acceptable: list[str], avoid: list[st
     workable = [p for p in places if p not in visa]
     if not workable:
         return LocationAssessment("visa", None, places, False, visa)
+    many = len(places) > many_places
     allowed = [p for p in workable if not any(matches(p, a) for a in avoid)]
     if not allowed:
-        return LocationAssessment("avoided", workable[0], places, workable[0].remote, visa)
-    for tier, patterns in (("preferred", preferred), ("acceptable", acceptable)):
+        return LocationAssessment("avoided", workable[0], places, workable[0].remote, visa,
+                                  many=many)  # fmt: skip
+    home = home_countries(preferred)
+    levels = {id(p): place_level(p, preferred, home, authorized, many) for p in allowed}
+    best = min(allowed, key=lambda p: LEVELS.index(levels[id(p)]))
+    level = levels[id(best)]
+    stages = [("preferred", preferred), ("acceptable", acceptable)]
+    if many:  # a long list of places is not "Madrid" just because Madrid is one of them
+        stages = [("acceptable", [*preferred, *acceptable])]
+    for tier, patterns in stages:
         hits = [p for p in allowed if any(matches(p, pat) for pat in patterns)]
         if hits:
-            return LocationAssessment(tier, hits[0], places, any(p.remote for p in hits), visa)
+            any_remote = any(p.remote for p in hits)
+            return LocationAssessment(tier, hits[0], places, any_remote, visa, level, many)
     known = [p for p in allowed if p.is_known or p.remote]
-    best = known[0] if known else allowed[0]
+    shown = known[0] if known else allowed[0]
     tier = "other" if known else "unknown"
-    return LocationAssessment(tier, best, places, any(p.remote for p in allowed), visa)
+    any_remote = any(p.remote for p in allowed)
+    return LocationAssessment(tier, shown, places, any_remote, visa, level if known else None, many)

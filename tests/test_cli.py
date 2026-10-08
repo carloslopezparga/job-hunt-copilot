@@ -302,3 +302,63 @@ def test_run_notify_telegram_with_fake_http(env, fixtures_copy, monkeypatch):
 
 def test_run_rejects_unknown_notifier(env, fixtures_copy):
     assert run("run", "--fixtures", str(fixtures_copy), "--notify", "email").exit_code == 1
+
+
+# ------------------------------------------------------------------------------- bot
+
+
+def test_bot_needs_telegram_credentials(env, monkeypatch):
+    monkeypatch.delenv("TELEGRAM_BOT_TOKEN", raising=False)
+    monkeypatch.delenv("TELEGRAM_CHAT_ID", raising=False)
+    result = run("bot")
+    assert result.exit_code == 1
+    assert "TELEGRAM_BOT_TOKEN" in result.output and "TELEGRAM_CHAT_ID" in result.output
+
+
+def test_bot_rejects_a_bad_daily_time(env, monkeypatch):
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "999:fake")
+    monkeypatch.setenv("TELEGRAM_CHAT_ID", "42")
+    result = run("bot", "--daily-at", "25:99")
+    assert result.exit_code == 1 and "HH:MM" in result.output
+
+
+def test_bot_rejects_an_unauthorized_token(env, monkeypatch):
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "999:fake")
+    monkeypatch.setenv("TELEGRAM_CHAT_ID", "42")
+    monkeypatch.setattr(
+        "jobhunt.notify.UrllibPoster.post",
+        lambda self, url, body, headers: {"ok": False, "description": "Unauthorized"},
+    )
+    result = run("bot", "--no-daily")
+    assert result.exit_code == 1 and "Unauthorized" in result.output
+    assert "999:fake" not in result.output
+
+
+def test_bot_answers_its_chat_and_stops_on_ctrl_c(env, monkeypatch):
+    sent = []
+    polls = {"n": 0}
+
+    def fake_post(self, url, body, headers):
+        method = url.rsplit("/", 1)[1]
+        payload = json.loads(body) if headers["Content-Type"] == "application/json" else {}
+        if method == "getMe":
+            return {"ok": True, "result": {"username": "my_bot"}}
+        if method == "getUpdates":
+            polls["n"] += 1
+            if polls["n"] > 1:
+                raise KeyboardInterrupt
+            return {"ok": True, "result": [
+                {"update_id": 1, "message": {"chat": {"id": 42}, "text": "/ayuda"}},
+                {"update_id": 2, "message": {"chat": {"id": 13}, "text": "/ayuda"}},
+            ]}  # fmt: skip
+        sent.append((method, payload.get("chat_id")))
+        return {"ok": True, "result": {"message_id": 1}}
+
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "999:fake")
+    monkeypatch.setenv("TELEGRAM_CHAT_ID", "42")
+    monkeypatch.setattr("jobhunt.notify.UrllibPoster.post", fake_post)
+    result = run("bot", "--no-daily")
+    assert result.exit_code == 0, result.output
+    assert "@my_bot" in result.output and "Bot stopped" in result.output
+    # the start-up message and the /ayuda answer go to chat 42; the stranger gets nothing
+    assert sent == [("sendMessage", "42"), ("sendMessage", "42")]

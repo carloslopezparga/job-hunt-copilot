@@ -13,7 +13,8 @@ Location priority: **Madrid → rest of Spain / remote from Spain or the EU → 
 It finds postings on public job boards, scores them against your profile, and prepares a
 tailored **CV (PDF)**, a **150–200 word cover letter** and a **LinkedIn note (≤ 300 chars)**
 for each good match. It tracks your pipeline, reminds you to follow up after 7 days, and can
-run every day on Windows and ping you on **Telegram** with the new matches.
+be driven entirely from **Telegram** (`jobhunt bot`): commands, one message per offer with
+buttons, and a built-in daily search.
 
 > [!IMPORTANT]
 > **The copilot never applies for you.** It does not submit forms, send emails or messages to
@@ -59,11 +60,12 @@ flowchart LR
 | `profile.yaml` | Your single source of truth: education, experience, projects, languages (real CEFR level + certificate only if you hold it), skills, sector motivations, role/sector/location/date preferences and work authorization. Git-ignored. |
 | `src/jobhunt/sources/` | Connectors for the public **Greenhouse**, **Lever** and **Ashby** job-board APIs behind one `JobSource` interface; `check.py` verifies boards before you rely on them. |
 | `src/jobhunt/location.py` | Splits multi-location strings, recognises cities/countries/regions (EN/ES), remote/hybrid markers and whether a place needs a visa you lack; ranks each job into location tiers. |
-| `src/jobhunt/scoring.py` | Scores each job 0–100 with configurable weights and a one-line explanation; filters duplicates; re-scores automatically when the profile changes. |
+| `src/jobhunt/scoring.py` | Scores each job 0–100 with configurable weights and a one-line explanation; location levels; hard caps (availability, contract, language); filters duplicates; re-scores automatically when the profile or the rules change. |
+| `src/jobhunt/languages.py` | Detects language requirements in postings ("Italian Fluent", "Portuguese speaking", "French Market") and compares them with your profile. |
 | `src/jobhunt/generator/` | Tailors your profile to the job (ranks *your* bullets/projects/skills), renders Jinja2 templates (EN/ES) and a reportlab PDF CV. Optional LLM polishing; works fully without one. |
-| `src/jobhunt/tracker.py` | SQLite pipeline: `new → prepared → applied → follow_up → interview / rejected`, full history, 7-day follow-up reminders, CSV export. |
-| `src/jobhunt/notify.py` | Telegram notifications (your own bot and chat; credentials only from environment variables). |
-| `src/jobhunt/cli.py` | Typer CLI: `init`, `discover`, `check-boards`, `add`, `score`, `locations`, `prepare`, `run`, `status`, `followups`, `export`. |
+| `src/jobhunt/tracker.py` | SQLite pipeline: `new → prepared → applied → follow_up → interview / rejected` (or `discarded`), full history, 7-day follow-up reminders, CSV export. |
+| `src/jobhunt/bot.py`, `notify.py` | The Telegram bot (long polling, commands, buttons, daily search) and the notification client (your own bot and chat; credentials only from environment variables). |
+| `src/jobhunt/cli.py` | Typer CLI: `init`, `discover`, `check-boards`, `add`, `score`, `locations`, `prepare`, `run`, `bot`, `status`, `followups`, `export`. |
 
 ## Installation
 
@@ -118,9 +120,10 @@ jobhunt check-boards                   # 404s, empty boards, postings in Spain /
 ```
 
 `companies.yaml` lists the employers that are read on every run (ATS, board slug, sector).
-`companies.candidates.yaml` lists **50 more employers with Spain/EU roles that are not active
-yet**: each slug was taken from a public board URL (cited in the entry) but still has to be
-verified against the live API. Verify them and append only the ones that work and have
+`companies.yaml` currently holds **102 boards**, every one verified against the live APIs
+(startups and scale-ups based in Madrid/Barcelona, fintech, quant/trading, consulting, AI).
+`companies.candidates.yaml` is the staging area for new employers: put the public board URL
+in `notes`, verify the entry against the live API and append only the ones that work and have
 postings an EU citizen can take without a visa:
 
 ```bash
@@ -148,34 +151,57 @@ jobhunt score --rescore                       # force; done automatically when p
 jobhunt locations                             # how every location string in your tracker is classified
 ```
 
-Scores are stored in the tracker together with a fingerprint of `profile.yaml` (and of the
-scoring rules): when either changes, the next `score`/`run` re-scores every job.
+Scores are stored in the tracker together with a fingerprint of `profile.yaml` and of the
+scoring rules: when either changes, the next `score`/`run`/bot search re-scores every job.
+This also covers a database created by an older version (no fingerprint stored yet): its old
+scores are recomputed once, automatically — no `--rescore` needed.
 
 | Component | Default weight | How it is judged |
 | --- | ---: | --- |
-| `role` | 20 | Your `preferences.roles` keywords in the title (1.0) or only in the description (0.4) |
+| `role` | 20 | Your `preferences.roles` in the title (1.0) or only in the description (0.4). Matching is by word root, so "Software Engineering Intern" matches `software engineer` and "Data Science" matches `data scientist` |
 | `contract` | 20 | Internship detected from the ATS field or title (intern, off-cycle, summer analyst, prácticas, werkstudent…) |
-| `location` | 20 | Location tier, see below |
+| `location` | 20 | Location level, see below |
 | `skills` | 15 | Your skills/tags found in the posting (5 matches = full marks) |
 | `sector` | 10 | Company sector (from `companies.yaml`) is in your `preferences.sectors` |
 | `dates` | 10 | "Summer 2027", "June 2027", "off-cycle 2027", "ASAP" (EN/ES)… matched against your availability windows |
 | `remote` | 5 | Remote jobs fit everything; on-site jobs only fit availability windows without `remote_only` |
 
-**Location tiers.** `preferences.locations` has three lists (`preferred`, `acceptable`,
+**Location levels.** `preferences.locations` has three lists (`preferred`, `acceptable`,
 `avoid`). Entries can be cities (`Madrid`), countries (`Spain`, `España`), regions (`EU`,
 `Europe`, `EMEA`), `Remote`, or a remote/hybrid place (`Remote - Spain`, `Remote - EU`,
 `Hybrid - Madrid`). Job locations such as `Madrid; Remote - EU`, `Spain/España`,
 `New York, NY | Barcelona, Spain` or `Madrid, London` are split, and **a job is ranked by the
-best place it offers**:
+best place it offers**. The priority is strong — a perfect Amsterdam offer cannot beat a
+decent Madrid one:
 
-| Tier | Example (default profile) | Location component | Final-score multiplier |
+| Level | Example (default profile) | Location component | Final-score multiplier |
 | --- | --- | ---: | ---: |
-| preferred | Madrid, Hybrid - Madrid | 1.0 | × 1.00 |
-| acceptable | Barcelona, Remote - Spain, Remote - EU, Amsterdam, Paris | 0.7 | × 0.95 |
-| unknown | no usable location | 0.4 | × 0.90 |
-| other | Zurich, EMEA, plain "Remote" | 0.3 | × 0.80 |
-| avoided | anything in `avoid` | 0.1 | × 0.60 |
-| **visa** | every listed place needs a permit you lack (London, New York, Remote - US, Singapore…) | 0.0 | **capped at 30** |
+| 1. `home` (your `preferred` city) | Madrid, Hybrid - Madrid | 1.0 | × 1.00 |
+| 2. `country` (rest of its country, on site) | Barcelona, Valencia | 0.8 | × 0.92 |
+| 3. `remote` (remote from there or the EU) | Remote - Spain, Remote - EU | 0.65 | × 0.88 |
+| 4. `abroad` (EU/EEA/CH on site, no visa) | Amsterdam, Paris, Zurich | 0.45 | × 0.80 |
+| 5. `other` (anywhere else you may work) | places added to `work_authorization` | 0.2 | × 0.55 |
+| unknown / avoided | no usable location / anything in `avoid` | 0.4 / 0.1 | × 0.80 / × 0.50 |
+| **visa** | every listed place needs a permit you lack (London, New York, Remote - US…) | 0.0 | **capped at 30** |
+
+A posting that lists **more than 5 places** is not "Madrid" just because Madrid is one of
+them: it is demoted to the next level and the explanation says so.
+
+**Hard requirements.** Some things are not a matter of degree. An offer that fails any of
+these can never score above **40**, so it never reaches the shortlist, and the explanation
+says why (`max 40: …`):
+
+- **Availability.** On-site (or unspecified-workplace) work that starts while you can only
+  work remotely — i.e. only inside an availability window with `remote_only: true`, like the
+  academic year — is capped. The same internship in summer 2027, or remote, is not.
+- **Contract.** If your profile wants an `internship`: full-time, part-time and contract
+  roles, "new grad"/"graduate"/"junior" titles, postings asking 2+ years of experience, and
+  postings with no sign of an internship at all are capped.
+- **Language.** If the posting *requires* a language your profile does not cover at B2 or
+  better ("Italian Fluent", "Portuguese speaking", "French Market", "fluent in German and
+  English", "dominio del italiano"…), it is capped. "… is a plus", "nice to have" and
+  "se valora" are not requirements. A profile language still marked `TODO` is not held against
+  the offer.
 
 Titles containing an excluded keyword (`senior`, `staff`, `lead`…) or a past season
 ("Summer 2026") are capped at 15. Weights live in `profile.yaml → scoring.weights`.
@@ -183,13 +209,15 @@ Duplicates (same company + normalized title + city, e.g. a re-posted job) are dr
 
 > If your `profile.yaml` was created from an older template it still has `location: 5` in
 > `scoring.weights`; raise it to `20` (or delete the `weights` block to use the defaults).
-> The tier multiplier and the visa cap apply either way.
+> The level multiplier and the caps apply either way.
 
 Example explanation:
 
 ```
 91 · internship ✓ · role 'strategy' ✓ · fintech ✓ · junio 2027 fits 'Summer / off-cycle internship 2027'
    · on-site OK · skills: SQL, Excel · Madrid, Spain (preferred)
+40 · max 40: on-site but starts in 'Remote internship during the academic year' (remote only until 2027-05-31)
+   · internship ✓ · role 'software engineer' ✓ · ai_tech ✓ · february 2027 fits 'Remote internship…' · Madrid, Spain (preferred)
 ```
 
 ### 4. Prepare material (and review it!)
@@ -249,43 +277,112 @@ jobhunt status 12                       # detail + history
 jobhunt status 12 applied --note "via careers site"   # after YOU applied (Spanish: aplicado)
 jobhunt followups                       # applications with a follow-up due (7 days later)
 jobhunt status 12 follow-up             # after you sent a follow-up -> next reminder in 7 days
-jobhunt status 12 interview             # or: rejected / entrevista / rechazado
+jobhunt status 12 interview             # or: rejected / discarded / entrevista / rechazado / descartado
 jobhunt export output/applications.csv  # open in Excel / Google Sheets
 ```
 
 Global options (or env vars): `--profile` (`JOBHUNT_PROFILE`), `--db` (`JOBHUNT_DB`),
 `--companies` (`JOBHUNT_COMPANIES`), `--out` (`JOBHUNT_OUTPUT`).
 
-## Telegram notifications
+## Telegram bot (the main interface)
 
-`jobhunt run --notify telegram` sends **one short message per new match** (company, title,
-location, score, reason, link) to a chat with **your own bot**; with `--prepare` it also
-attaches the CV and the cover letter. Nothing is sent to anyone else.
+`jobhunt bot` turns your own Telegram bot into the control panel of the copilot. It runs on
+your PC, long-polls Telegram, answers **only your chat** (messages and button presses from
+any other chat are ignored without a reply) and **searches by itself once a day**, so it does
+not need the Windows Task Scheduler.
 
-1. **Create the bot.** In Telegram, open a chat with **@BotFather** (check the blue tick),
-   send `/newbot`, choose a display name and a username ending in `bot`. BotFather replies
-   with a **token** like `123456789:AA...`. Treat it like a password.
-2. **Find your chat id.** Open a chat with your new bot and send it any message (e.g. `hola`).
+| Command | What it does |
+| --- | --- |
+| `/hoy` | New offers (first seen today or yesterday) that pass your filters, **one message per offer** |
+| `/madrid` | Best offers located in Madrid (your `preferred` city) |
+| `/espana` | Best offers anywhere in Spain, including remote-from-Spain ones |
+| `/pendientes` | Applications with no answer yet, and follow-ups that are due (7 days after applying) |
+| `/stats` | Tracker size, pipeline counts, offers passing the filters, last search, daily time |
+| `/buscar` | Runs discover + score right now and reports the new matches |
+| `/ayuda` | The list of commands |
+
+"Pass your filters" means: score ≥ `scoring.min_score_to_prepare`, location accepted by
+`preferences.locations.run_filter`, and not already discarded/applied. At most 10 offers are sent
+per command (`--max-offers`). Under every offer there are four buttons:
+
+| Button | What it does |
+| --- | --- |
+| **Abrir** | Opens the official posting |
+| **Preparar** | Generates and sends you the tailored **CV (PDF)** and **cover letter** to review. If `profile.yaml` still has `TODO` fields it says so and generates **nothing** |
+| **Descartar** | Marks the offer `discarded`; it disappears from all lists |
+| **Aplicada** | Marks it `applied` and schedules the 7-day follow-up. **Only the status changes** |
+
+The bot never applies, never emails employers and never touches LinkedIn: you apply yourself on
+the company's site and then press *Aplicada*.
+
+**Daily search.** Every day at `--daily-at HH:MM` (default `09:00`, env `JOBHUNT_BOT_DAILY_AT`,
+`--no-daily` to turn it off) the bot runs discover + score and sends a summary plus the new
+matches. If the PC was off at that time, it runs as soon as the bot starts. The first full
+scoring of a large database takes a few minutes; the bot keeps answering meanwhile.
+
+### Set it up
+
+1. **Create the bot.** In Telegram open a chat with **@BotFather** (check the blue tick), send
+   `/newbot`, choose a display name and a username ending in `bot`. BotFather replies with a
+   **token** like `123456789:AA...`. Treat it like a password.
+2. **Get your chat id.** Open a chat with your new bot and send it any message (e.g. `hola`).
    Then open `https://api.telegram.org/bot<TOKEN>/getUpdates` in a browser (replace `<TOKEN>`)
-   and look for `"chat":{"id":123456789,...}`. That number is your **chat id**.
-3. **Store both as environment variables** — never in the repository or in `profile.yaml`:
-   - Windows (PowerShell, current user; open a **new** terminal afterwards):
-     ```powershell
-     setx TELEGRAM_BOT_TOKEN "123456789:AA..."
-     setx TELEGRAM_CHAT_ID "123456789"
-     ```
-     or *Start → "Edit environment variables for your account"* (*"Editar las variables de
-     entorno de esta cuenta"*) → **New…** for each variable.
-   - macOS / Linux: `export TELEGRAM_BOT_TOKEN=...` and `export TELEGRAM_CHAT_ID=...` in your
-     shell profile.
-4. **Test it:** `jobhunt run --notify telegram`. Without the variables the command still
-   works and prints that no notification was sent.
+   and look for `"chat":{"id":123456789,...}`. That number is your **chat id**. (If the page
+   shows `"result":[]`, send another message to the bot and reload.)
+3. **Store both as environment variables** — never in the repository or in `profile.yaml`.
+   On Windows, **one command** in PowerShell (current user; it takes effect in new windows,
+   and `start_bot.ps1` reads it from your user settings anyway):
+   ```powershell
+   setx TELEGRAM_BOT_TOKEN "123456789:AA..."; setx TELEGRAM_CHAT_ID "123456789"
+   ```
+   (or *Start → "Edit environment variables for your account"* /
+   *"Editar las variables de entorno de esta cuenta"* → **New…** for each variable).
+   macOS/Linux: `export TELEGRAM_BOT_TOKEN=... TELEGRAM_CHAT_ID=...` in your shell profile.
+4. **Run it.** From the repository folder:
+   ```powershell
+   powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\start_bot.ps1
+   ```
+   (or `jobhunt bot` inside the activated virtual environment). You get a "job-hunt-copilot
+   activo" message in Telegram; try `/ayuda`. Options: `-DailyAt 08:30`, `-NoDaily`.
+   `start_bot.ps1` activates `.venv`, reads the variables, allows only one running copy,
+   restarts the bot if it crashes (and gives up if it cannot even start), and logs to
+   `logs\bot_<date>.log` (kept 30 days).
 
-Privacy note: with `--prepare` your CV and letter (personal data) are uploaded to Telegram's
-servers, to your private chat with your bot. Use `-NoPrepare` in the daily script (or drop
-`--prepare`) if you prefer to receive only the links.
+### Start it automatically when you turn on the PC
 
-## Daily automation on Windows (Task Scheduler)
+Register a task that runs `start_bot.ps1` hidden every time you log in (run once, in
+PowerShell, as your user; adjust the path):
+
+```powershell
+$repo = "C:\path\to\job-hunt-copilot"
+$action = New-ScheduledTaskAction -Execute "powershell.exe" -WorkingDirectory $repo `
+  -Argument "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$repo\scripts\start_bot.ps1`""
+$trigger = New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME
+$settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries `
+  -StartWhenAvailable -ExecutionTimeLimit ([TimeSpan]::Zero)   # zero = never stopped after 72 h
+Register-ScheduledTask -TaskName "job-hunt-copilot bot" -Action $action -Trigger $trigger -Settings $settings
+```
+
+Start it now without rebooting: `Start-ScheduledTask "job-hunt-copilot bot"`. To stop it:
+`Stop-ScheduledTask "job-hunt-copilot bot"` (and `Unregister-ScheduledTask "job-hunt-copilot bot"`
+to remove it). Without administrator rights you can instead press `Win+R`, type `shell:startup`
+and put there a shortcut to `powershell.exe -NoProfile -WindowStyle Hidden -ExecutionPolicy
+Bypass -File "C:\path\to\job-hunt-copilot\scripts\start_bot.ps1"`.
+
+The bot lives while you are logged in on that PC: if the PC is off, messages you send are
+answered when it starts again (Telegram keeps them for up to 24 h).
+
+Privacy note: *Preparar* uploads your CV and letter (personal data) to Telegram's servers, to
+your private chat with your own bot.
+
+### One-off notifications without the bot
+
+`jobhunt run --notify telegram [--prepare]` (same two environment variables) still sends the
+new matches of one `run` as plain messages, optionally with the CV and the letter attached.
+
+## Alternative: daily `run` with the Windows Task Scheduler
+
+If you prefer not to keep the bot running, this schedules the one-shot `jobhunt run`.
 
 `scripts\run_daily.ps1` activates `.venv`, reads the Telegram variables from your user
 environment, runs `jobhunt run --notify telegram --prepare` (plus a dated shortlist in
@@ -341,14 +438,17 @@ companies.yaml               employers read on every run (ATS + slug + sector)
 companies.candidates.yaml    employers to verify with check-boards before adding
 profile.template.yaml        commented template -> copy to profile.yaml (git-ignored)
 profile.example.yaml         fictional filled-in example (used by tests and the demo)
-scripts/run_daily.ps1        Windows Task Scheduler entry point
+scripts/run_daily.ps1        Windows Task Scheduler entry point (one-shot run)
+scripts/start_bot.ps1        starts the Telegram bot and keeps it running (Windows)
 src/jobhunt/
   profile.py                 load/validate profile, TODO detection, EN/ES text, fingerprint
   models.py                  Company and normalized Job
   sources/                   base.py (interface, fetchers), greenhouse/lever/ashby, check.py
-  location.py                place parsing, visa checks, location tiers
-  scoring.py                 0-100 score, explanation, date windows, dedup
-  pipeline.py                re-scoring on profile change, location filters
+  location.py                place parsing, visa checks, location tiers and levels
+  languages.py               language requirements in postings vs. your profile
+  scoring.py                 0-100 score, explanation, hard caps, date windows, dedup
+  pipeline.py                discover/score/prepare steps, re-scoring, location filters
+  bot.py                     Telegram bot: commands, buttons, daily search
   tracker.py                 SQLite states, history, follow-ups, run markers, CSV
   generator/                 tailoring, letters (Jinja2), cv_pdf (reportlab), llm (optional)
   shortlist.py, notify.py    markdown shortlist, Telegram
@@ -359,7 +459,7 @@ tests/                       pytest suite + JSON fixtures in tests/fixtures/
 ## Development
 
 ```bash
-pytest                 # connectors (fixtures + local HTTP server), location, scoring, tracker, generator, run/Telegram (fake HTTP), CLI
+pytest                 # connectors (fixtures + local HTTP server), location, scoring, tracker, generator, run/Telegram bot (simulated Telegram client), scoring on real postings, CLI
 ruff check src tests && ruff format --check src tests
 ```
 
