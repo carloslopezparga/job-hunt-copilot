@@ -357,7 +357,8 @@ class LocationAssessment:
         return f"{where} ({self.tier}{extra})"
 
 
-def _home_countries(preferred: list[str]) -> set[str]:
+def home_countries(preferred: list[str]) -> set[str]:
+    """Countries of the preferred places (Madrid -> {'ES'})."""
     return {c for pattern in preferred for place in _analyze(pattern) for c in place.countries()}
 
 
@@ -400,7 +401,7 @@ def assess(
     if not allowed:
         return LocationAssessment("avoided", workable[0], places, workable[0].remote, visa,
                                   many=many)  # fmt: skip
-    home = _home_countries(preferred)
+    home = home_countries(preferred)
     levels = {id(p): place_level(p, preferred, home, authorized, many) for p in allowed}
     best = min(allowed, key=lambda p: LEVELS.index(levels[id(p)]))
     level = levels[id(best)]

@@ -123,6 +123,72 @@ class TelegramNotifier:
         self._check(response, f"sendDocument({Path(path).name})")
 
 
+Button = dict[str, str]  # {"text": ..., "url": ...} or {"text": ..., "callback_data": ...}
+
+
+@dataclass
+class TelegramApi:
+    """Minimal Bot API client used by `jobhunt bot`: long polling, messages with inline
+    buttons, documents. The token only ever appears in the request URL and is scrubbed
+    from every error message."""
+
+    token: str = field(repr=False)
+    http: HttpPoster = field(default_factory=UrllibPoster)
+
+    def _call(self, method: str, payload: dict, what: str | None = None) -> object:
+        body = json.dumps(payload).encode("utf-8")
+        url = f"{API_BASE}/bot{self.token}/{method}"
+        return self._result(
+            self.http.post(url, body, {"Content-Type": "application/json"}), what or method
+        )
+
+    def _result(self, response: dict, what: str) -> object:
+        if not response.get("ok"):
+            reason = str(response.get("description", "unknown error")).replace(self.token, "***")
+            raise NotifyError(f"Telegram {what} failed: {reason}")
+        return response.get("result")
+
+    def get_me(self) -> dict:
+        return self._call("getMe", {})  # type: ignore[return-value]
+
+    def get_updates(self, offset: int | None, timeout: int) -> list[dict]:
+        payload: dict = {"timeout": timeout, "allowed_updates": ["message", "callback_query"]}
+        if offset is not None:
+            payload["offset"] = offset
+        return self._call("getUpdates", payload) or []  # type: ignore[return-value]
+
+    def send_message(
+        self, chat_id: str, text: str, buttons: list[list[Button]] | None = None
+    ) -> int:
+        payload: dict = {
+            "chat_id": chat_id,
+            "text": text[:MESSAGE_LIMIT],
+            "disable_web_page_preview": True,
+        }
+        if buttons:
+            payload["reply_markup"] = {"inline_keyboard": buttons}
+        result = self._call("sendMessage", payload)
+        return int(result.get("message_id", 0)) if isinstance(result, dict) else 0
+
+    def edit_buttons(self, chat_id: str, message_id: int, buttons: list[list[Button]]) -> None:
+        self._call(
+            "editMessageReplyMarkup",
+            {"chat_id": chat_id, "message_id": message_id,
+             "reply_markup": {"inline_keyboard": buttons}},
+        )  # fmt: skip
+
+    def answer_callback(self, callback_id: str, text: str = "") -> None:
+        self._call("answerCallbackQuery", {"callback_query_id": callback_id, "text": text[:200]})
+
+    def send_document(self, chat_id: str, path: str | Path, caption: str = "") -> None:
+        body, ctype = _multipart(
+            {"chat_id": chat_id, "caption": caption[:CAPTION_LIMIT]}, "document", Path(path)
+        )
+        url = f"{API_BASE}/bot{self.token}/sendDocument"
+        response = self.http.post(url, body, {"Content-Type": ctype})
+        self._result(response, f"sendDocument({Path(path).name})")
+
+
 def offer_message(record: JobRecord) -> str:
     """Short plain-text message: company, title, location, score, reason, link."""
     job = record.job
@@ -157,7 +223,9 @@ def notify_offers(
 
 
 __all__ = [
+    "Button",
     "HttpPoster",
+    "TelegramApi",
     "NotifyError",
     "TelegramNotifier",
     "UrllibPoster",
