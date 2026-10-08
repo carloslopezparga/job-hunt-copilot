@@ -32,7 +32,7 @@ STATUS_ALIASES = {
     "rechazado": "rejected",
 }
 OPEN_FOLLOWUP_STATUSES = ("applied", "follow_up")
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS jobs (
@@ -54,6 +54,7 @@ CREATE TABLE IF NOT EXISTS jobs (
     description       TEXT NOT NULL DEFAULT '',
     posted_at         TEXT,
     first_seen        TEXT NOT NULL,
+    first_seen_at     TEXT,
     last_seen         TEXT NOT NULL,
     score             INTEGER,
     score_explanation TEXT,
@@ -67,6 +68,10 @@ CREATE TABLE IF NOT EXISTS jobs (
 );
 CREATE INDEX IF NOT EXISTS idx_jobs_dedup ON jobs(dedup_key);
 CREATE INDEX IF NOT EXISTS idx_jobs_status ON jobs(status);
+CREATE TABLE IF NOT EXISTS meta (
+    key   TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS events (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     job_id      INTEGER NOT NULL REFERENCES jobs(id) ON DELETE CASCADE,
@@ -121,6 +126,7 @@ class JobRecord:
     status: str
     status_changed_at: str
     first_seen: str
+    first_seen_at: str | None
     last_seen: str
     applied_at: str | None
     next_followup_at: str | None
@@ -153,6 +159,7 @@ class JobRecord:
             status=row["status"],
             status_changed_at=row["status_changed_at"],
             first_seen=row["first_seen"],
+            first_seen_at=row["first_seen_at"],
             last_seen=row["last_seen"],
             applied_at=row["applied_at"],
             next_followup_at=row["next_followup_at"],
@@ -176,17 +183,56 @@ class Event:
     note: str
 
 
+def _utc_now() -> dt.datetime:
+    return dt.datetime.now(dt.UTC)
+
+
 class Tracker:
-    def __init__(self, path: str | Path, clock: Callable[[], dt.date] | None = None) -> None:
+    def __init__(
+        self,
+        path: str | Path,
+        clock: Callable[[], dt.date] | None = None,
+        now: Callable[[], dt.datetime] | None = None,
+    ) -> None:
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.clock = clock or dt.date.today
+        self.now = now or _utc_now
         self.conn = sqlite3.connect(self.path)
         self.conn.row_factory = sqlite3.Row
         self.conn.execute("PRAGMA foreign_keys = ON")
+        self._migrate()
         self.conn.executescript(_SCHEMA)
         self.conn.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
         self.conn.commit()
+
+    def _migrate(self) -> None:
+        """Bring databases created by older versions up to the current schema."""
+        has_jobs = self.conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name='jobs'"
+        ).fetchone()
+        if not has_jobs:
+            return
+        columns = {r["name"] for r in self.conn.execute("PRAGMA table_info(jobs)")}
+        if "first_seen_at" not in columns:  # v1 -> v2
+            self.conn.execute("ALTER TABLE jobs ADD COLUMN first_seen_at TEXT")
+
+    # -- key/value metadata ------------------------------------------------------
+    def get_meta(self, key: str) -> str | None:
+        row = self.conn.execute("SELECT value FROM meta WHERE key = ?", (key,)).fetchone()
+        return row["value"] if row else None
+
+    def set_meta(self, key: str, value: str) -> None:
+        with self.conn:
+            self.conn.execute(
+                "INSERT INTO meta (key, value) VALUES (?, ?) "
+                "ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+                (key, value),
+            )
+
+    def timestamp(self) -> str:
+        """Current UTC time as a sortable ISO string (microsecond precision)."""
+        return self.now().astimezone(dt.UTC).isoformat(timespec="microseconds")
 
     # -- context manager ---------------------------------------------------------
     def __enter__(self) -> Tracker:
@@ -209,6 +255,7 @@ class Tracker:
         """
         result = UpsertResult()
         today = self._today()
+        seen_at = self.timestamp()
         with self.conn:
             for job in jobs:
                 key = dedup_key(job)
@@ -250,8 +297,9 @@ class Tracker:
                     """INSERT INTO jobs (uid, dedup_key, source, external_id, company,
                            company_slug, sector, title, url, location, locations,
                            workplace_type, employment_type, department, description,
-                           posted_at, first_seen, last_seen, status, status_changed_at)
-                       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, 'new', ?)""",
+                           posted_at, first_seen, first_seen_at, last_seen, status,
+                           status_changed_at)
+                       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, 'new', ?)""",
                     (
                         job.uid,
                         key,
@@ -270,6 +318,7 @@ class Tracker:
                         job.description,
                         job.posted_at,
                         today,
+                        seen_at,
                         today,
                         today,
                     ),
@@ -306,6 +355,15 @@ class Tracker:
             f"SELECT * FROM jobs {where} ORDER BY score IS NULL, score DESC, id", params
         ).fetchall()
         return [JobRecord.from_row(r) for r in rows]
+
+    def first_seen_after(self, timestamp: str | None) -> list[JobRecord]:
+        """Jobs first inserted after ``timestamp`` (all timestamped jobs if None)."""
+        if timestamp is None:
+            sql, params = "SELECT * FROM jobs WHERE first_seen_at IS NOT NULL", ()
+        else:
+            sql, params = "SELECT * FROM jobs WHERE first_seen_at > ?", (timestamp,)
+        rows = self.conn.execute(f"{sql} ORDER BY score IS NULL, score DESC, id", params)
+        return [JobRecord.from_row(r) for r in rows.fetchall()]
 
     def set_score(self, job_id: int, score: int, explanation: str) -> None:
         with self.conn:

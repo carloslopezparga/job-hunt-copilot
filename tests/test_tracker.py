@@ -200,3 +200,74 @@ def test_persistence_across_connections(tmp_path, clock):
         t.set_status(1, "applied")
     with Tracker(path, clock=clock) as t:
         assert t.get(1).status == "applied"
+
+
+# ------------------------------------------------------------- v2: meta, timestamps
+
+
+class Ticker:
+    """Deterministic UTC clock that advances one second per call."""
+
+    def __init__(self) -> None:
+        self.t = dt.datetime(2026, 10, 8, 9, 0, tzinfo=dt.UTC)
+
+    def __call__(self) -> dt.datetime:
+        self.t += dt.timedelta(seconds=1)
+        return self.t
+
+
+def test_meta_roundtrip(tracker):
+    assert tracker.get_meta("profile_fingerprint") is None
+    tracker.set_meta("profile_fingerprint", "abc")
+    tracker.set_meta("profile_fingerprint", "def")
+    assert tracker.get_meta("profile_fingerprint") == "def"
+
+
+def test_first_seen_after(tmp_path, clock):
+    with Tracker(tmp_path / "t.db", clock=clock, now=Ticker()) as t:
+        t.upsert_jobs([job(1)])
+        mark = t.timestamp()
+        t.upsert_jobs([job(1, description="refresh"), job(2)])
+        assert [r.id for r in t.first_seen_after(mark)] == [2]
+        assert {r.id for r in t.first_seen_after(None)} == {1, 2}
+        assert t.get(1).first_seen_at < mark < t.get(2).first_seen_at
+
+
+def test_migrates_v1_database(tmp_path):
+    """A tracker created by v0.1 (no first_seen_at, no meta table) keeps working."""
+    import sqlite3
+
+    path = tmp_path / "old.db"
+    conn = sqlite3.connect(path)
+    conn.executescript(
+        """
+        CREATE TABLE jobs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, uid TEXT NOT NULL UNIQUE,
+            dedup_key TEXT NOT NULL, source TEXT NOT NULL, external_id TEXT NOT NULL,
+            company TEXT NOT NULL, company_slug TEXT NOT NULL, sector TEXT,
+            title TEXT NOT NULL, url TEXT NOT NULL DEFAULT '', location TEXT NOT NULL DEFAULT '',
+            locations TEXT NOT NULL DEFAULT '[]', workplace_type TEXT NOT NULL DEFAULT 'unknown',
+            employment_type TEXT NOT NULL DEFAULT 'unknown', department TEXT NOT NULL DEFAULT '',
+            description TEXT NOT NULL DEFAULT '', posted_at TEXT, first_seen TEXT NOT NULL,
+            last_seen TEXT NOT NULL, score INTEGER, score_explanation TEXT, scored_at TEXT,
+            status TEXT NOT NULL DEFAULT 'new', status_changed_at TEXT NOT NULL,
+            applied_at TEXT, next_followup_at TEXT, prepared_dir TEXT,
+            notes TEXT NOT NULL DEFAULT ''
+        );
+        INSERT INTO jobs (uid, dedup_key, source, external_id, company, company_slug, title,
+                          first_seen, last_seen, status_changed_at, score)
+        VALUES ('lever:old:1', 'k', 'lever', '1', 'Old', 'old', 'Old intern',
+                '2026-10-01', '2026-10-01', '2026-10-01', 70);
+        PRAGMA user_version = 1;
+        """
+    )
+    conn.commit()
+    conn.close()
+    with Tracker(path, now=Ticker()) as t:
+        old = t.get(1)
+        assert old.score == 70 and old.first_seen_at is None
+        assert t.first_seen_after(None) == []  # pre-existing rows never count as "new"
+        t.set_meta("k", "v")
+        t.upsert_jobs([job(5)])
+        assert [r.job.external_id for r in t.first_seen_after(None)] == ["5"]
+        assert t.conn.execute("PRAGMA user_version").fetchone()[0] == 2
