@@ -201,7 +201,8 @@ class Tracker:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.clock = clock or dt.date.today
         self.now = now or _utc_now
-        self.conn = sqlite3.connect(self.path)
+        # generous timeout: the bot searches in a background thread while answering buttons
+        self.conn = sqlite3.connect(self.path, timeout=30)
         self.conn.row_factory = sqlite3.Row
         self.conn.execute("PRAGMA foreign_keys = ON")
         self._migrate()
