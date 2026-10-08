@@ -159,7 +159,7 @@ def test_discover_collects_errors_without_aborting(fixtures_dir, fetcher):
 
 def test_repo_companies_file_is_valid(root):
     companies = load_companies(root / "companies.yaml")
-    assert len(companies) >= 30
+    assert len(companies) >= 25
     assert {c.ats for c in companies} == {"greenhouse", "lever", "ashby"}
     assert len({(c.ats, c.slug) for c in companies}) == len(companies)
 

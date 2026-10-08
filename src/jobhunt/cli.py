@@ -32,6 +32,8 @@ from jobhunt.pipeline import LocationFilter, apply_filter, score_tracked
 from jobhunt.profile import SECTORS, Profile, ProfileError, load_profile
 from jobhunt.scoring import assess_location, deduplicate
 from jobhunt.sources import FixtureFetcher, HttpFetcher, discover, load_companies
+from jobhunt.sources.check import check_board, qualifies
+from jobhunt.sources.check import promote as promote_companies
 from jobhunt.tracker import STATUSES, Tracker, TrackerError, normalize_status
 
 app = typer.Typer(
@@ -162,6 +164,60 @@ def discover_cmd(
         f"{stats.duplicates + len(result.jobs) - len(jobs)} duplicates skipped. "
         "Next: [bold]jobhunt score[/bold]"
     )
+
+
+@app.command(name="check-boards")
+def check_boards(
+    ctx: typer.Context,
+    file: Annotated[
+        Path | None, typer.Option(help="Companies file to check (default: --companies).")
+    ] = None,
+    promote: Annotated[
+        Path | None,
+        typer.Option(help="Append boards that pass to this file (e.g. companies.yaml)."),
+    ] = None,
+    min_eu_jobs: Annotated[
+        int, typer.Option(help="Postings in Spain/EU/no-visa places a board needs to pass.")
+    ] = 1,
+    fixtures: Annotated[Path | None, typer.Option(help="Offline mode (tests/demos).")] = None,
+) -> None:
+    """Verify boards against the live APIs: 404s, empty boards, and how many postings
+    are in Spain or elsewhere in the EU. With --promote, add only boards that pass."""
+    path = file or _settings(ctx).companies
+    try:
+        companies = load_companies(path)
+    except (OSError, ValueError) as exc:
+        err.print(f"[red]Cannot load companies:[/red] {exc}")
+        raise typer.Exit(1) from exc
+    fetcher = FixtureFetcher(fixtures) if fixtures else HttpFetcher()
+    console.print(f"Checking {len(companies)} boards from {path}…")
+    checks = [check_board(c, fetcher) for c in companies]
+
+    table = Table()
+    for column in ("company", "board", "status", "result"):
+        table.add_column(column, overflow="fold")
+    style = {"ok": "green", "empty": "yellow", "not_found": "red", "error": "red"}
+    for chk in checks:
+        c = chk.company
+        status = chk.status
+        if status == "ok" and not qualifies(chk, min_eu_jobs):
+            status = "ok, no EU jobs"
+        table.add_row(c.name, f"{c.ats}/{c.slug}", f"[{style[chk.status]}]{status}[/]",
+                      chk.summary)  # fmt: skip
+    console.print(table)
+    passed = [chk for chk in checks if qualifies(chk, min_eu_jobs)]
+    console.print(
+        f"[bold]{len(passed)} pass[/bold] (>= {min_eu_jobs} posting(s) in Spain/EU), "
+        f"{len(checks) - len(passed)} fail: "
+        + ", ".join(f"{sum(c.status == s for c in checks)} {s}" for s in style)
+    )
+    if promote:
+        added = promote_companies(passed, promote, _today())
+        console.print(
+            f"Added {len(added)} compan{'y' if len(added) == 1 else 'ies'} to {promote}; "
+            f"discarded {len(checks) - len(passed)}; "
+            f"{len(passed) - len(added)} already present."
+        )
 
 
 # ---------------------------------------------------------------------------- add

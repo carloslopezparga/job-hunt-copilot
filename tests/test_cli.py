@@ -176,3 +176,25 @@ def test_locations_command(env, fixtures_dir):
     assert "Madrid, Spain" in out and "preferred" in out
     only_visa = run("locations", "--tier", "visa").output
     assert "Madrid, Spain" not in only_visa
+
+
+def test_check_boards_and_promote(env, fixtures_dir, tmp_path):
+    candidates = tmp_path / "candidates.yaml"
+    candidates.write_text(
+        "companies:\n"
+        "  - {name: Paylane, ats: lever, slug: paylane, sector: fintech, region: eu}\n"
+        "  - {name: Empty Co, ats: ashby, slug: emptyco, sector: ai_tech}\n"
+        "  - {name: Ghost Corp, ats: greenhouse, slug: ghostcorp, sector: consulting}\n"
+    )
+    target = tmp_path / "companies.yaml"
+    target.write_text(
+        "companies:\n  - {name: Helix AI, ats: ashby, slug: helixai, sector: ai_tech}\n"
+    )
+    result = run("check-boards", "--file", str(candidates), "--fixtures", str(fixtures_dir),
+                 "--promote", str(target))  # fmt: skip
+    assert result.exit_code == 0, result.output
+    assert "1 pass" in result.output
+    assert "not_found" in result.output and "empty" in result.output
+    assert "Added 1 company" in result.output and "discarded 2" in result.output
+    assert "slug: paylane" in target.read_text()
+    assert "emptyco" not in target.read_text()
