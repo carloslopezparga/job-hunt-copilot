@@ -117,9 +117,9 @@ def test_start_bot_gives_up_when_the_bot_keeps_crashing(fake_repo):
 
 @pwsh_only
 def test_a_second_copy_exits_quietly(fake_repo):
-    # the first "bot" runs for 4 s; the second start happens meanwhile
+    # the first "bot" runs for 8 s; the second start happens meanwhile
     (fake_repo / ".venv" / "bin" / "jobhunt").write_text(
-        '#!/bin/sh\necho "$@" >> "$STUB_LOG"\nsleep 4\n', encoding="utf-8"
+        '#!/bin/sh\necho "$@" >> "$STUB_LOG"\nsleep 8\n', encoding="utf-8"
     )
     first = subprocess.Popen(
         ["pwsh", "-NoProfile", "-File", str(fake_repo / "scripts" / "start_bot.ps1")],
@@ -127,7 +127,9 @@ def test_a_second_copy_exits_quietly(fake_repo):
         env={**os.environ, "STUB_LOG": str(fake_repo / "calls.log"),
              "TELEGRAM_BOT_TOKEN": "1:x", "TELEGRAM_CHAT_ID": "42"},
     )  # fmt: skip
-    time.sleep(2.5)
+    deadline = time.time() + 30  # wait until the first copy is really running the bot
+    while not (fake_repo / "calls.log").exists() and time.time() < deadline:
+        time.sleep(0.2)
     second = run_start_bot(fake_repo)
     first.wait(timeout=60)
     assert second.returncode == 0 and "already running" in second.stdout
