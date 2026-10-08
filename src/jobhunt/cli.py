@@ -501,7 +501,10 @@ def run_cmd(
                  if r.score is not None and r.score >= threshold]  # fmt: skip
         shortlist = apply_filter(fresh, profile, LocationFilter.from_profile(profile))
         if previous is None:
-            console.print("First run: jobs already in the tracker before it are not shown.")
+            console.print(
+                "First run: jobs found from now on count as new; jobs tracked by older "
+                "versions (before run markers existed) are never reported."
+            )
         console.print(
             f"[bold]{len(shortlist)} new offer(s)[/bold] with score >= {threshold:g} "
             f"(of {len(tracker.first_seen_after(previous))} new postings)."

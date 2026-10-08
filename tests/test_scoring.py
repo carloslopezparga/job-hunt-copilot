@@ -270,6 +270,11 @@ def test_rank_on_fixtures(profile, fixture_jobs):
     # London internship needs a UK visa for an EU-only candidate: capped, out of the top
     london = next(r for j, r in ranked if j.title == "Quantitative Research Intern - Summer 2027")
     assert london.score <= VISA_CAP and london.location.tier == "visa"
+    # Madrid (preferred) outranks Amsterdam (acceptable) even with fewer skill matches
+    order = [j.title for j, _ in ranked]
+    assert order.index("Prácticas Strategy & Operations") < order.index(
+        "Software Engineer Intern (Off-Cycle 2027)"
+    )
     bottom = {j.title for j, r in ranked if r.score <= EXCLUDED_CAP}
     assert bottom == {
         "Senior Quantitative Developer",

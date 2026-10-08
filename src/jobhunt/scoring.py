@@ -18,7 +18,7 @@ from jobhunt.profile import AvailabilityWindow, Profile
 from jobhunt.textutils import contains_term, find_terms, fold, looks_like_internship, normalize_key
 
 # Bump when scoring logic changes so stored scores are recomputed automatically.
-SCORING_VERSION = "2"
+SCORING_VERSION = "3"
 
 DEFAULT_WEIGHTS: dict[str, float] = {
     "role": 20,
@@ -37,9 +37,9 @@ SKILLS_FOR_FULL_MARKS = 5
 # the location priority bite even when a profile gives the location weight little room.
 LOCATION_TIERS: dict[str, tuple[float, float]] = {
     "preferred": (1.0, 1.0),
-    "acceptable": (0.7, 1.0),
-    "unknown": (0.4, 0.95),
-    "other": (0.3, 0.85),
+    "acceptable": (0.7, 0.95),
+    "unknown": (0.4, 0.9),
+    "other": (0.3, 0.8),
     "avoided": (0.1, 0.6),
     "visa": (0.0, 1.0),  # capped at VISA_CAP instead
 }
