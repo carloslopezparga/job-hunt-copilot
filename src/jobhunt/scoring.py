@@ -215,20 +215,20 @@ def _contract(job: Job, profile: Profile) -> tuple[float, str, str | None]:
         return 0.2, "internship ✗", None
     if job.employment_type in wanted:
         return 1.0, f"{job.employment_type} ✓", None
-    only_interns = "internship" in wanted
+    wants_internship = "internship" in wanted
     if job.employment_type != "unknown":
         label = job.employment_type.replace("_", "-")
-        return 0.0, f"{label} ✗", f"{label} role, internship wanted" if only_interns else None
+        return 0.0, f"{label} ✗", f"{label} role, internship wanted" if wants_internship else None
     head = job.description[:1500]
     if find_terms(job.title, NEW_GRAD_TERMS):
-        return 0.0, "new grad ✗", "new-grad role, internship wanted" if only_interns else None
+        return 0.0, "new grad ✗", "new-grad role, internship wanted" if wants_internship else None
     if _min_years_required(job.description) >= 2:
-        reason = "needs experience, internship wanted" if only_interns else None
+        reason = "needs experience, internship wanted" if wants_internship else None
         return 0.05, "experience required ✗", reason
-    if only_interns and looks_like_internship(head):
+    if wants_internship and looks_like_internship(head):
         return 0.5, "contract unclear (mentions internship)", None
     full_time = find_terms(head, ["full-time", "full time", "permanent"])
-    reason = "no sign of an internship" if only_interns else None
+    reason = "no sign of an internship" if wants_internship else None
     return (0.05, "likely full-time ✗", reason) if full_time else (0.2, "contract unclear", reason)
 
 
