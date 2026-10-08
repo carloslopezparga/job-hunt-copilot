@@ -45,6 +45,8 @@ jobs:
           JOBHUNT_COMPANIES: tests/fixtures/companies.sample.yaml
         run: |
           jobhunt discover --fixtures tests/fixtures
-          jobhunt score
+          jobhunt score --no-visa
           jobhunt prepare --top 2
+          jobhunt run --fixtures tests/fixtures --prepare --export output/shortlist.md --notify telegram
+          jobhunt check-boards --fixtures tests/fixtures
           jobhunt export output/applications.csv

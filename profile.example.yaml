@@ -143,10 +143,25 @@ preferences:
   sectors: [ai_tech, quant_trading, investment_banking, consulting, fintech]
   contract_types: [internship]
   exclude_title_keywords: [senior, staff, principal, lead, manager, director, head of, phd]
+  # Location tiers. Entries can be cities ("Madrid"), countries ("Spain", "España"),
+  # regions ("EU", "Europe", "EMEA"), "Remote", or remote/hybrid with a place
+  # ("Remote - Spain", "Remote - EU", "Hybrid - Madrid"). A job listing several places
+  # is ranked by the best one. Places needing a visa you lack (see
+  # personal.work_authorization) are capped at 30 points whatever these lists say.
   locations:
-    preferred: [London, Amsterdam, Zurich, Dublin, Paris, Berlin, Munich, New York, Singapore]
-    acceptable: [Europe, EMEA, Madrid, Barcelona, Lisbon]
-    avoid: []
+    preferred: [Madrid]                     # 1) Madrid
+    acceptable:                             # 2) rest of Spain, remote from Spain/EU
+      - Spain                               # 3) EU countries (no visa for EU citizens)
+      - Remote - Spain
+      - Remote - EU
+      - Remote - Europe
+      - EU
+    avoid: []                               # places to push to the bottom
+    # Filters used by `jobhunt run` (score >= min_score_to_prepare is always required).
+    run_filter:
+      no_visa: true          # hide offers whose every location needs a visa you lack
+      remote_only: false     # only remote offers
+      tiers: [preferred, acceptable, other]   # also: unknown, avoided, visa
   availability:
     - label: "Remote internship during the academic year"
       start: "2026-10-01"
@@ -161,10 +176,10 @@ preferences:
 scoring:
   min_score_to_prepare: 65
   weights:
-    role: 25
-    sector: 15
+    role: 20
     contract: 20
-    remote: 10
-    dates: 10
+    location: 20
     skills: 15
-    location: 5
+    sector: 10
+    dates: 10
+    remote: 5

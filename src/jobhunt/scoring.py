@@ -12,21 +12,37 @@ import datetime as dt
 import re
 from dataclasses import dataclass, field
 
+from jobhunt.location import LocationAssessment, assess
 from jobhunt.models import Job
 from jobhunt.profile import AvailabilityWindow, Profile
 from jobhunt.textutils import contains_term, find_terms, fold, looks_like_internship, normalize_key
 
+# Bump when scoring logic changes so stored scores are recomputed automatically.
+SCORING_VERSION = "3"
+
 DEFAULT_WEIGHTS: dict[str, float] = {
-    "role": 25,
-    "sector": 15,
+    "role": 20,
     "contract": 20,
-    "remote": 10,
-    "dates": 10,
+    "location": 20,
     "skills": 15,
-    "location": 5,
+    "sector": 10,
+    "dates": 10,
+    "remote": 5,
 }
 EXCLUDED_CAP = 15
+VISA_CAP = 30  # below any sensible min_score_to_prepare: never shortlisted
 SKILLS_FOR_FULL_MARKS = 5
+
+# Location tier -> (component value, multiplier on the final score). The multiplier makes
+# the location priority bite even when a profile gives the location weight little room.
+LOCATION_TIERS: dict[str, tuple[float, float]] = {
+    "preferred": (1.0, 1.0),
+    "acceptable": (0.7, 0.95),
+    "unknown": (0.4, 0.9),
+    "other": (0.3, 0.8),
+    "avoided": (0.1, 0.6),
+    "visa": (0.0, 1.0),  # capped at VISA_CAP instead
+}
 
 
 @dataclass
@@ -35,6 +51,7 @@ class ScoreResult:
     components: dict[str, float] = field(default_factory=dict)
     notes: dict[str, str] = field(default_factory=dict)
     excluded: str | None = None
+    location: LocationAssessment | None = None
 
     @property
     def explanation(self) -> str:
@@ -131,24 +148,6 @@ def _matching_windows(
     return [w for w in windows if any(w.overlaps(p.start, p.end) for p in periods)]
 
 
-# ------------------------------------------------------------------------ location
-
-_US_MARKERS = [
-    "united states", "usa", "us", "new york", "nyc", "ny", "san francisco", "chicago", "il",
-    "boston", "seattle", "austin", "tx", "los angeles", "miami", "palo alto", "mountain view",
-]  # fmt: skip
-_UK_MARKERS = ["united kingdom", "uk", "london", "cambridge", "manchester", "edinburgh"]
-
-
-def _visa_note(text: str, authorizations: list[str]) -> tuple[float, str | None]:
-    auth = {a.upper() for a in authorizations}
-    if "US" not in auth and find_terms(text, _US_MARKERS):
-        return 0.5, "US visa sponsorship likely needed"
-    if "UK" not in auth and find_terms(text, _UK_MARKERS):
-        return 0.85, "UK visa needed"
-    return 1.0, None
-
-
 # ---------------------------------------------------------------------- components
 
 
@@ -238,9 +237,9 @@ def _dates(
 
 
 def _remote(
-    job: Job, windows: list[AvailabilityWindow], no_availability: bool
+    job: Job, windows: list[AvailabilityWindow], no_availability: bool, remote_ok: bool
 ) -> tuple[float, str]:
-    if job.workplace_type == "remote":
+    if remote_ok:
         return 1.0, "remote ✓"
     if not windows:
         if no_availability:
@@ -262,23 +261,16 @@ def _skills(job: Job, profile: Profile) -> tuple[float, str]:
     return value, "skills: " + ", ".join(matched[:4])
 
 
-def _location(job: Job, profile: Profile) -> tuple[float, str]:
+def assess_location(job: Job, profile: Profile) -> LocationAssessment:
     prefs = profile.preferences.locations
-    text = " | ".join([job.location, *job.locations])
-    city = job.location or (job.locations[0] if job.locations else "location unknown")
-    if find_terms(text, prefs.avoid):
-        value, label = 0.1, "avoided"
-    elif find_terms(text, prefs.preferred):
-        value, label = 1.0, "preferred"
-    elif find_terms(text, prefs.acceptable):
-        value, label = 0.7, "acceptable"
-    elif job.workplace_type == "remote":
-        value, label = 0.8, "remote"
-    else:
-        value, label = 0.3, "not in preferences"
-    factor, visa = _visa_note(text, profile.personal.work_authorization)
-    note = f"{city} ({label}{', ' + visa if visa else ''})"
-    return value * factor, note
+    return assess(
+        job, prefs.preferred, prefs.acceptable, prefs.avoid, profile.personal.work_authorization
+    )
+
+
+def _location(assessment: LocationAssessment) -> tuple[float, str]:
+    value, _ = LOCATION_TIERS[assessment.tier]
+    return value, assessment.label()
 
 
 # --------------------------------------------------------------------------- score
@@ -299,16 +291,18 @@ def score_job(job: Job, profile: Profile, today: dt.date | None = None) -> Score
     components["contract"], notes["contract"] = _contract(job, profile)
     components["role"], notes["role"] = _role(job, profile)
     components["sector"], notes["sector"] = _sector(job, profile)
+    location = assess_location(job, profile)
+    remote_ok = location.remote or (job.workplace_type == "remote" and location.tier != "visa")
     components["dates"], notes["dates"], windows, stale = _dates(job, profile, today)
     components["remote"], notes["remote"] = _remote(
-        job, windows, no_availability=not profile.preferences.availability
+        job, windows, no_availability=not profile.preferences.availability, remote_ok=remote_ok
     )
     components["skills"], notes["skills"] = _skills(job, profile)
-    components["location"], notes["location"] = _location(job, profile)
+    components["location"], notes["location"] = _location(location)
 
     total_weight = sum(weights.values()) or 1.0
     raw = sum(weights[k] * components[k] for k in components) / total_weight * 100
-    score = round(raw)
+    score = round(raw * LOCATION_TIERS[location.tier][1])
 
     keyword = next(
         (kw for kw in profile.preferences.exclude_title_keywords if contains_term(job.title, kw)),
@@ -317,7 +311,16 @@ def score_job(job: Job, profile: Profile, today: dt.date | None = None) -> Score
     excluded = f"'{keyword}' in title" if keyword else stale
     if excluded:
         score = min(score, EXCLUDED_CAP)
-    return ScoreResult(score=score, components=components, notes=notes, excluded=excluded)
+    elif location.needs_visa:
+        score = min(score, VISA_CAP)
+    return ScoreResult(
+        score=score, components=components, notes=notes, excluded=excluded, location=location
+    )
+
+
+def scoring_fingerprint(profile: Profile) -> str:
+    """Changes whenever the profile or the scoring logic changes."""
+    return f"v{SCORING_VERSION}:{profile.fingerprint()}"
 
 
 # ----------------------------------------------------------------------- dedup

@@ -18,13 +18,17 @@ from pathlib import Path
 from typing import Any, Protocol
 
 from jobhunt.models import Company, Job
-from jobhunt.textutils import looks_like_internship, looks_remote
+from jobhunt.textutils import contains_term, looks_like_internship, looks_remote
 
 USER_AGENT = "job-hunt-copilot/0.1 (+personal internship search; human-in-the-loop)"
 
 
 class SourceError(RuntimeError):
     """A board could not be fetched or parsed."""
+
+    def __init__(self, message: str, *, not_found: bool = False) -> None:
+        super().__init__(message)
+        self.not_found = not_found  # the board does not exist (HTTP 404 / missing fixture)
 
 
 class Fetcher(Protocol):
@@ -53,7 +57,7 @@ class HttpFetcher:
                 return payload
             except urllib.error.HTTPError as exc:
                 if exc.code == 404:
-                    raise SourceError(f"board not found (404): {url}") from exc
+                    raise SourceError(f"board not found (404): {url}", not_found=True) from exc
                 last_error = exc
                 if exc.code < 500 and exc.code != 429:
                     break
@@ -72,7 +76,7 @@ class FixtureFetcher:
     def get_json(self, url: str, *, key: str) -> Any:  # noqa: ARG002 - url unused offline
         path = self.directory / f"{key}.json"
         if not path.exists():
-            raise SourceError(f"no fixture {path.name} in {self.directory}")
+            raise SourceError(f"no fixture {path.name} in {self.directory}", not_found=True)
         return json.loads(path.read_text(encoding="utf-8"))
 
 
@@ -126,6 +130,8 @@ def normalize_workplace(explicit: str | None, *texts: str) -> str:
         return "onsite"
     if looks_remote(*texts):
         return "remote"
+    if any(contains_term(t, term) for t in texts if t for term in ("hybrid", "híbrido")):
+        return "hybrid"  # e.g. "Hybrid - Madrid"
     return "unknown"
 
 
