@@ -135,6 +135,7 @@ def test_explicit_application_date(tracker):
         ("follow up", "follow_up"),
         ("interview", "interview"),
         ("rechazado", "rejected"),
+        ("descartada", "discarded"),
     ],
 )
 def test_status_aliases(raw, expected):
@@ -165,6 +166,7 @@ def test_scores_filters_and_counts(tracker):
         "follow_up": 0,
         "interview": 0,
         "rejected": 1,
+        "discarded": 0,
     }
 
 

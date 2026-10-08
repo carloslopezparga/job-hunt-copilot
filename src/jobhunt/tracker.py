@@ -1,6 +1,7 @@
 """SQLite application tracker: pipeline states, history, follow-up reminders, CSV export.
 
-States: new -> prepared -> applied -> follow_up -> interview / rejected.
+States: new -> prepared -> applied -> follow_up -> interview / rejected; any offer you
+are not interested in is marked discarded.
 Marking a job as ``applied`` (or logging a ``follow_up``) schedules the next
 follow-up reminder ``FOLLOWUP_DAYS`` later. The tracker only records what the
 user did; it never contacts anyone.
@@ -20,7 +21,7 @@ from jobhunt.models import Job
 from jobhunt.scoring import dedup_key
 
 FOLLOWUP_DAYS = 7
-STATUSES = ("new", "prepared", "applied", "follow_up", "interview", "rejected")
+STATUSES = ("new", "prepared", "applied", "follow_up", "interview", "rejected", "discarded")
 STATUS_ALIASES = {
     "nuevo": "new",
     "preparado": "prepared",
@@ -30,6 +31,8 @@ STATUS_ALIASES = {
     "seguimiento": "follow_up",
     "entrevista": "interview",
     "rechazado": "rejected",
+    "descartado": "discarded",
+    "descartada": "discarded",
 }
 OPEN_FOLLOWUP_STATUSES = ("applied", "follow_up")
 SCHEMA_VERSION = 2
@@ -405,7 +408,7 @@ class Tracker:
             updates["next_followup_at"] = follow
         elif status == "follow_up":
             updates["next_followup_at"] = follow
-        elif status in ("interview", "rejected", "new", "prepared"):
+        elif status in ("interview", "rejected", "discarded", "new", "prepared"):
             updates["next_followup_at"] = None
         assignments = ", ".join(f"{k}=?" for k in updates)
         with self.conn:

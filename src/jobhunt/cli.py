@@ -588,7 +588,7 @@ def status(
                 statuses = (
                     [normalize_status(filter_status)]
                     if filter_status
-                    else [s for s in STATUSES if s != "rejected"]
+                    else [s for s in STATUSES if s not in ("rejected", "discarded")]
                 )
                 _print_jobs(tracker.jobs(status=statuses), explain=False)
                 return
