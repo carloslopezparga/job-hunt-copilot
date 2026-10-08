@@ -407,6 +407,7 @@ def test_a_second_search_only_reports_what_is_new(searching):
     tg.messages.clear()
     bot.search("manual")
     assert job_titles(tg) == [] and "0 pasan tus filtros" in tg.texts[0]
+    assert len(tg.texts) == 1  # just the summary: no empty or error message follows
 
 
 def test_buscar_while_a_search_runs_is_refused(searching):
