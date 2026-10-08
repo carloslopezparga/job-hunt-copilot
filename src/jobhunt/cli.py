@@ -25,15 +25,21 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-from jobhunt.generator import IncompleteProfileError, PreparedApplication, prepare_application
+from jobhunt.generator import IncompleteProfileError, PreparedApplication
 from jobhunt.generator.llm import Polisher, get_polisher
 from jobhunt.models import Job
 from jobhunt.notify import TelegramNotifier, notify_offers
-from jobhunt.pipeline import LocationFilter, apply_filter, score_tracked
+from jobhunt.pipeline import (
+    LocationFilter,
+    apply_filter,
+    discover_tracked,
+    prepare_record,
+    score_tracked,
+)
 from jobhunt.profile import SECTORS, Profile, ProfileError, load_profile
-from jobhunt.scoring import assess_location, deduplicate
+from jobhunt.scoring import assess_location
 from jobhunt.shortlist import render_markdown, write_markdown
-from jobhunt.sources import FixtureFetcher, HttpFetcher, discover, load_companies
+from jobhunt.sources import FixtureFetcher, HttpFetcher, load_companies
 from jobhunt.sources.check import check_board, qualifies
 from jobhunt.sources.check import promote as promote_companies
 from jobhunt.tracker import STATUSES, JobRecord, Tracker, TrackerError, normalize_status
@@ -164,19 +170,17 @@ def _discover_into(
 
     fetcher = FixtureFetcher(fixtures) if fixtures else HttpFetcher()
     console.print(f"Fetching {len(companies)} boards{' (offline)' if fixtures else ''}…")
-    result = discover(companies, fetcher)
-    jobs = deduplicate(result.jobs)
-    stats = tracker.upsert_jobs(jobs)
+    summary = discover_tracked(tracker, companies, fetcher)
 
     if verbose:
-        for name, count in sorted(result.counts.items()):
+        for name, count in sorted(summary.boards_ok.items()):
             console.print(f"  [green]✓[/green] {name}: {count} postings")
-    for name, error in sorted(result.errors.items()):
+    for name, error in sorted(summary.errors.items()):
         console.print(f"  [yellow]![/yellow] {name}: {error}")
     console.print(
-        f"[bold]{stats.inserted} new[/bold], {stats.updated} refreshed, "
-        f"{stats.duplicates + len(result.jobs) - len(jobs)} duplicates skipped "
-        f"({len(result.counts)} boards OK, {len(result.errors)} failed)."
+        f"[bold]{summary.inserted} new[/bold], {summary.updated} refreshed, "
+        f"{summary.duplicates} duplicates skipped "
+        f"({len(summary.boards_ok)} boards OK, {len(summary.errors)} failed)."
     )
 
 
@@ -319,7 +323,7 @@ def score(
             if r.score is not None and r.score >= min_score
         ]
     records = apply_filter(records, profile, flt)
-    if run.reason == "profile changed":
+    if run.reason in ("profile changed", "migrated database"):
         console.print("profile.yaml (or the scoring rules) changed: re-scored every job.")
     console.print(f"Scored {run.scored} job(s). Showing {min(limit, len(records))} of "
                   f"{len(records)} matching job(s).")  # fmt: skip
@@ -429,21 +433,16 @@ def _prepare_one(
     polisher: Polisher,
     allow_placeholders: bool = False,
 ) -> PreparedApplication:
-    result = prepare_application(
-        record.job,
+    result = prepare_record(
+        tracker,
         profile,
+        record,
         _settings(ctx).out,
+        _today(),
         lang=lang,
         polisher=polisher,
-        record_id=record.id,
-        score=record.score,
-        explanation=record.score_explanation,
-        today=_today(),
         allow_placeholders=allow_placeholders,
     )
-    tracker.set_prepared_dir(record.id, str(result.directory))
-    if record.status == "new":
-        tracker.set_status(record.id, "prepared", note=f"material in {result.directory}")
     console.print(
         f"[green]✓[/green] #{record.id} {record.job.title} — {record.job.company} "
         f"\\[{result.lang}] → {result.directory}  "
@@ -495,7 +494,7 @@ def run_cmd(
         _discover_into(ctx, tracker, None, fixtures, verbose=False)
         cutoff = tracker.timestamp()
         scoring = score_tracked(tracker, profile, _today())
-        if scoring.reason == "profile changed":
+        if scoring.reason in ("profile changed", "migrated database"):
             console.print("profile.yaml (or the scoring rules) changed: re-scored every job.")
         fresh = [r for r in tracker.first_seen_after(previous)
                  if r.score is not None and r.score >= threshold]  # fmt: skip

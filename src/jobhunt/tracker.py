@@ -365,6 +365,12 @@ class Tracker:
         rows = self.conn.execute(f"{sql} ORDER BY score IS NULL, score DESC, id", params)
         return [JobRecord.from_row(r) for r in rows.fetchall()]
 
+    def has_scores(self) -> bool:
+        return (
+            self.conn.execute("SELECT 1 FROM jobs WHERE score IS NOT NULL LIMIT 1").fetchone()
+            is not None
+        )
+
     def set_score(self, job_id: int, score: int, explanation: str) -> None:
         with self.conn:
             self.conn.execute(

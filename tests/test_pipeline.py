@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import datetime as dt
+import json
 
 import yaml
 
@@ -97,3 +98,46 @@ def test_apply_filter_on_records(tmp_path, profile):
         tracker.upsert_jobs([job("Madrid"), job("New York, NY")])
         kept = apply_filter(tracker.jobs(), profile, LocationFilter(no_visa=True))
         assert [r.job.location for r in kept] == ["Madrid"]
+
+
+def _legacy_database(path, jobs):
+    """A tracker file as written by v1: no first_seen_at column, no scoring fingerprint,
+    scores computed by older rules."""
+    import sqlite3
+
+    from jobhunt.tracker import _SCHEMA
+
+    jobs_table = _SCHEMA.split("CREATE TABLE IF NOT EXISTS meta")[0]  # v1 had no meta table
+    jobs_table = "\n".join(x for x in jobs_table.splitlines() if "first_seen_at" not in x)
+    with sqlite3.connect(path) as conn:
+        conn.executescript(jobs_table)
+        for i, job in enumerate(jobs, start=1):
+            conn.execute(
+                "INSERT INTO jobs (id, uid, dedup_key, source, external_id, company, company_slug,"
+                " sector, title, url, location, locations, workplace_type, employment_type,"
+                " department, description, first_seen, last_seen, score, score_explanation,"
+                " status, status_changed_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                (i, job.uid, f"k{i}", job.source, job.external_id, job.company, job.company_slug,
+                 job.sector, job.title, job.url, job.location, json.dumps(job.locations),
+                 job.workplace_type, job.employment_type, job.department, job.description,
+                 "2026-09-01", "2026-09-01", 99, "old rules", "new", "2026-09-01"),
+            )  # fmt: skip
+
+
+def test_migrated_database_is_rescored_automatically(tmp_path, profile, fixtures_dir):
+    db = tmp_path / "old.db"
+    _legacy_database(db, load_fixture_jobs(fixtures_dir)[:4])
+    with Tracker(db) as tracker:  # opening migrates the schema
+        assert tracker.get_meta(FINGERPRINT_KEY) is None
+        assert {r.score for r in tracker.jobs()} == {99}
+
+        run = score_tracked(tracker, profile, TODAY)  # no --rescore / force
+        assert (run.scored, run.reason) == (4, "migrated database") and run.rescored_all
+        assert 99 not in {r.score for r in tracker.jobs()}
+        assert score_tracked(tracker, profile, TODAY).reason == "new jobs"  # and only once
+
+
+def test_empty_database_without_fingerprint_is_not_a_migration(tmp_path, profile, fixtures_dir):
+    with Tracker(tmp_path / "t.db") as tracker:
+        tracker.upsert_jobs(load_fixture_jobs(fixtures_dir)[:2])
+        assert score_tracked(tracker, profile, TODAY).reason == "new jobs"
