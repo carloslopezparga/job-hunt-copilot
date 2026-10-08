@@ -132,3 +132,47 @@ def test_add_manual_offer(env, tmp_path):
         == 1
     )
     assert "Summer Analyst" in run("score").output
+
+
+# ------------------------------------------------------------ score filters & rescoring
+
+
+def test_score_filters(env, fixtures_dir):
+    run("discover", "--fixtures", str(fixtures_dir))
+    run("score")
+    every = run("score").output
+    assert "Quantitative Research Intern - Summer 2027" in every  # London, visa-capped
+    no_visa = run("score", "--no-visa").output
+    assert "Quantitative Research Intern - Summer 2027" not in no_visa
+    assert "Prácticas Strategy & Operations" in no_visa
+    madrid = run("score", "--location", "Madrid").output
+    assert "Prácticas Strategy & Operations" in madrid
+    assert "Data Science Intern (Remote)" not in madrid
+    remote = run("score", "--remote-only").output
+    assert "Data Science Intern (Remote)" in remote
+    assert "Prácticas Strategy & Operations" not in remote
+    assert "Showing 2 of" in run("score", "--limit", "2").output
+
+
+def test_score_rescores_when_profile_changes(env, fixtures_dir, root):
+    run("discover", "--fixtures", str(fixtures_dir))
+    assert "Scored 11 job(s)" in run("score").output
+    assert "Scored 0 job(s)" in run("score").output
+    edited = env / "profile.yaml"
+    text = (root / "profile.example.yaml").read_text(encoding="utf-8")
+    edited.write_text(
+        text.replace('work_authorization: ["EU"]', 'work_authorization: ["EU", "UK"]')
+    )
+    result = run("--profile", str(edited), "score")
+    assert "changed: re-scored every job" in result.output
+    assert "Scored 11 job(s)" in result.output
+    assert "Scored 11 job(s)" in run("--profile", str(edited), "score", "--rescore").output
+
+
+def test_locations_command(env, fixtures_dir):
+    run("discover", "--fixtures", str(fixtures_dir))
+    out = run("locations").output
+    assert "London, United Kingdom" in out and "visa" in out
+    assert "Madrid, Spain" in out and "preferred" in out
+    only_visa = run("locations", "--tier", "visa").output
+    assert "Madrid, Spain" not in only_visa

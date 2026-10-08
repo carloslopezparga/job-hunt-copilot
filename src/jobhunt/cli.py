@@ -28,8 +28,9 @@ from rich.table import Table
 from jobhunt.generator import IncompleteProfileError, prepare_application
 from jobhunt.generator.llm import get_polisher
 from jobhunt.models import Job
+from jobhunt.pipeline import LocationFilter, apply_filter, score_tracked
 from jobhunt.profile import SECTORS, Profile, ProfileError, load_profile
-from jobhunt.scoring import deduplicate, score_job
+from jobhunt.scoring import assess_location, deduplicate
 from jobhunt.sources import FixtureFetcher, HttpFetcher, discover, load_companies
 from jobhunt.tracker import STATUSES, Tracker, TrackerError, normalize_status
 
@@ -219,24 +220,39 @@ def add(
 @app.command()
 def score(
     ctx: typer.Context,
-    rescore: Annotated[bool, typer.Option(help="Re-score jobs that already have a score.")] = False,
+    rescore: Annotated[
+        bool, typer.Option(help="Re-score every job (done automatically if profile.yaml changed).")
+    ] = False,
     min_score: Annotated[int, typer.Option(help="Only list jobs at or above this score.")] = 0,
+    location: Annotated[
+        str | None,
+        typer.Option(
+            help="Only jobs with a place matching this, e.g. Madrid, Spain, 'Remote - EU'."
+        ),
+    ] = None,
+    no_visa: Annotated[
+        bool, typer.Option("--no-visa", help="Hide jobs that need a visa you do not have.")
+    ] = False,
+    remote_only: Annotated[
+        bool, typer.Option("--remote-only", help="Only jobs that can be done remotely.")
+    ] = False,
     limit: Annotated[int, typer.Option(help="Rows to show.")] = 25,
 ) -> None:
     """Score tracked jobs 0-100 against your profile and list the best matches."""
     profile = _profile(ctx)
-    today = _today()
+    flt = LocationFilter(text=location, no_visa=no_visa, remote_only=remote_only)
     with _tracker(ctx) as tracker:
-        pending = tracker.jobs() if rescore else tracker.jobs(unscored_only=True)
-        for record in pending:
-            result = score_job(record.job, profile, today)
-            tracker.set_score(record.id, result.score, result.explanation)
+        run = score_tracked(tracker, profile, _today(), force=rescore)
         records = [
             r
             for r in tracker.jobs(status=["new", "prepared"])
             if r.score is not None and r.score >= min_score
         ]
-    console.print(f"Scored {len(pending)} job(s).")
+    records = apply_filter(records, profile, flt)
+    if run.reason == "profile changed":
+        console.print("profile.yaml (or the scoring rules) changed: re-scored every job.")
+    console.print(f"Scored {run.scored} job(s). Showing {min(limit, len(records))} of "
+                  f"{len(records)} matching job(s).")  # fmt: skip
     _print_jobs(records[:limit], explain=True)
     threshold = profile.scoring.min_score_to_prepare
     good = [r.id for r in records if r.score is not None and r.score >= threshold and
@@ -244,6 +260,41 @@ def score(
     if good:
         ids = " ".join(map(str, good[:5]))
         console.print(f"Next: review the top matches, then [bold]jobhunt prepare {ids}[/bold]")
+
+
+@app.command()
+def locations(
+    ctx: typer.Context,
+    limit: Annotated[int, typer.Option(help="Rows to show.")] = 60,
+    tier: Annotated[
+        str | None, typer.Option(help="Only this tier: preferred, acceptable, other, visa...")
+    ] = None,
+) -> None:
+    """List the location strings in your tracker and how they are classified.
+
+    Use it to spot misclassified places (and to copy real examples into tests).
+    """
+    profile = _profile(ctx)
+    counts: dict[str, list] = {}
+    with _tracker(ctx) as tracker:
+        for record in tracker.jobs():
+            key = " | ".join(dict.fromkeys([record.job.location, *record.job.locations]))
+            entry = counts.setdefault(key, [0, record.job])
+            entry[0] += 1
+    rows = []
+    for key, (count, job) in counts.items():
+        assessment = assess_location(job, profile)
+        if tier and assessment.tier != tier:
+            continue
+        rows.append((count, key or "(none)", assessment.tier, assessment.label()))
+    rows.sort(key=lambda r: (-r[0], r[1]))
+    table = Table()
+    for column in ("jobs", "location as posted", "tier", "interpretation"):
+        table.add_column(column, overflow="fold")
+    for count, key, t, label in rows[:limit]:
+        table.add_row(str(count), key, t, label)
+    console.print(table)
+    console.print(f"{len(rows)} distinct location strings.")
 
 
 # ------------------------------------------------------------------------ prepare
